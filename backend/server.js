@@ -14,16 +14,40 @@ const PORT = process.env.PORT || 5000;
 import authRoutes from "./routes/auth.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 
+// CORS configuration - FIXED
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
+  "http://localhost:5173" // Vite default port
+].filter(Boolean); // Remove any undefined values
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.some(allowedOrigin => 
+      origin === allowedOrigin || 
+      origin.startsWith(allowedOrigin.replace('https://', 'http://'))
+    )) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Important for CORS
 }));
 app.use(morgan('combined'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Apply general rate limiting to all routes
 app.use(generalLimiter);
@@ -39,18 +63,34 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/phase1-db
 // Routes
 app.use('/api/auth', authRoutes);
 
-// Existing test routes (keep these)
+// Enhanced test routes
 app.get('/', (req, res) => {
   res.json({
     message: '🚀 Backend is running!',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    version: '2.0.0'
+    version: '2.0.0',
+    cors: {
+      allowedOrigins: allowedOrigins,
+      frontendUrl: process.env.FRONTEND_URL
+    }
   });
 });
 
 app.get('/api/hello', async (req, res) => {
-  // ... keep existing hello endpoint code
+  try {
+    res.json({
+      success: true,
+      message: 'Hello from Task Manager API!',
+      timestamp: new Date().toISOString(),
+      database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
 });
 
 app.get('/api/health', (req, res) => {
@@ -58,16 +98,35 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
     timestamp: new Date().toISOString(),
-    version: '2.0.0'
+    version: '2.0.0',
+    environment: process.env.NODE_ENV,
+    cors: {
+      allowedOrigins: allowedOrigins.length,
+      frontendUrl: process.env.FRONTEND_URL
+    }
   });
 });
 
+// CORS pre-flight for all routes
+app.options('*', cors());
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error stack:', err.stack);
+  
+  // CORS error
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ 
+      success: false,
+      error: 'CORS policy: Origin not allowed',
+      allowedOrigins: allowedOrigins
+    });
+  }
+  
+  // General error
   res.status(500).json({ 
     success: false,
-    error: 'Something went wrong!' 
+    error: process.env.NODE_ENV === 'production' ? 'Something went wrong!' : err.message
   });
 });
 
@@ -75,13 +134,16 @@ app.use((err, req, res, next) => {
 app.use('*', (req, res) => {
   res.status(404).json({ 
     success: false,
-    error: 'Route not found' 
+    error: 'Route not found',
+    path: req.originalUrl,
+    method: req.method
   });
 });
 
 app.listen(PORT, () => {
   console.log(`🎯 Backend server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+  console.log(`🌐 Allowed CORS origins:`, allowedOrigins);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔐 Auth routes available at: http://localhost:${PORT}/api/auth`);
 });
