@@ -1,75 +1,102 @@
-# Phase 1 - Full Stack Project Setup
 
-## 🎯 Goal
-Hello World (frontend + backend connected) with MongoDB Atlas integration.
+# 🚀 TaskFlow
 
-## 🛠 Tech Stack
-- **Frontend**: React + Vite + Tailwind CSS
-- **Backend**: Node.js + Express + MongoDB Atlas
-- **Database**: MongoDB with Mongoose ODM
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB Atlas account
-- Git
-
-### Installation
-
-1. **Clone and setup**
-   ```bash
-   git clone <your-repo-url>
-   cd phase1-fullstack
-   npm run install:all
-   ```
+A **full-stack task management application** built with **React, Node.js, Express, and MongoDB** — designed to help you stay organized, productive, and focused.
 
 ---
-# Phase 2 - User Authentication ✅
 
-## 🎯 Goal Completed
-Complete sign up/login flow with JWT authentication, deployed to staging.
+## ✨ Features
 
-## 🛠 New Features Added
-- **Backend**: User schema, JWT authentication, protected routes
-- **Frontend**: Auth forms, context API, protected routes
-- **Security**: Password hashing, rate limiting, input validation
-- **Deployment**: Ready for Render + Vercel
+### 🎯 Task Management
 
-## 🔐 Authentication Flow
-1. User signs up → JWT token generated
-2. Token stored securely in localStorage
-3. Automatic token inclusion in API requests
-4. Protected routes with route guards
-5. Persistent sessions across refreshes
+* Create, update, and delete tasks effortlessly
+* Set **priorities, due dates**, and **statuses** (Pending, In-Progress, Completed)
+* Quick status changes and **drag-and-drop** between groups
 
-## 🚀 Deployment URLs
-- **Frontend**: 
-- **Backend**: 
-## 📚 API Endpoints
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login  
-- `GET /api/auth/me` - Get current user
-- `PUT /api/auth/profile` - Update profile
+### 📁 Project & Group Organization
 
-## 🔒 Security Features
-- Password hashing with bcryptjs
-- JWT token expiration
-- Rate limiting on auth routes
-- Input validation with express-validator
-- CORS configuration
-- Helmet security headers
+* Custom **color-coded groups** with icons
+* **Default groups:** Personal, Work, Shopping, Ideas
+* Real-time task counts and smooth organization
 
-## ✅ Phase 2 Completion Checklist
-- [x] User schema with Mongoose
-- [x] JWT authentication middleware
-- [x] Signup/login API endpoints
-- [x] Password hashing and validation
-- [x] React auth context and forms
-- [x] Protected routes and navigation
-- [x] Error handling and loading states
-- [x] Deployed to staging (Render + Vercel)
-- [x] Environment configuration
-- [x] Comprehensive documentation
+### 🔐 Authentication
+
+* **JWT-based login** with secure password hashing
+* **Protected routes** and persistent sessions
+* User profile management
+
+### 📊 Productivity Analytics
+
+* Track **total, pending, and completed** tasks
+* **Productivity score** based on completion rates
+* Weekly and monthly progress stats
+
+### 🗓️ Calendar & Reminders
+
+* Month, week, and day views with **drag-reschedule**
+* Smart reminders for deadlines
+* All-day and timed event support
+
+### 🎨 User Experience
+
+* Responsive layout (desktop, tablet, mobile)
+* **Dark/Light mode** support
+* Real-time feedback and smooth navigation
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend:** React 18, Tailwind CSS, React Router, Axios, React Big Calendar
+**Backend:** Node.js, Express.js, MongoDB, Mongoose, JWT, bcryptjs
+**Deployment:** Vercel (frontend), Render/Railway (backend), MongoDB Atlas
+
+---
+
+## ⚙️ Quick Start
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd taskflow
+
+# Install dependencies
+npm run install:all
+
+# Configure environment
+# backend/.env
+MONGODB_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret_key
+
+# Start servers
+npm run dev:backend
+npm run dev:frontend
+```
+
+---
+
+## 🔗 API Reference
+
+Full API documentation available in [`docs/api.md`](docs/api.md).
+
+---
+
+## 🔮 Roadmap
+
+* 📱 Mobile App (React Native)
+* 👥 Team Collaboration
+* 📈 Advanced Analytics
+* 🎨 Custom Themes
+* 🌐 Offline Support
+
+---
+
+## 📄 License
+
+Licensed under the **MIT License**.
+
+---
+
+**TaskFlow** — *Organize your work. Boost your productivity. Achieve more.* 💪
 
 ---
