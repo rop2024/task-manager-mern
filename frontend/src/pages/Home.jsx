@@ -41,16 +41,24 @@ const Home = () => {
     fetchBackendData();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <header className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
-            🚀 Phase 2
+            🚀 Phase 4
           </h1>
-          <p className="text-xl text-gray-600 mb-6">
-            User Authentication - Complete!
+          <p className="text-xl text-gray-600">
+            Groups & Projects - Complete!
           </p>
           <div className="mt-4 flex justify-center gap-2 flex-wrap">
             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -68,17 +76,15 @@ const Home = () => {
             <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
               JWT Auth
             </span>
+            <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm font-medium">
+              Groups
+            </span>
           </div>
         </header>
 
         {/* Authentication Status Section */}
         <div className="max-w-4xl mx-auto mb-8">
-          {loading ? (
-            <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Checking authentication...</p>
-            </div>
-          ) : isAuthenticated ? (
+          {isAuthenticated ? (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="text-center">
                 <div className="flex justify-center items-center mb-4">
@@ -88,14 +94,20 @@ const Home = () => {
                   </h2>
                 </div>
                 <p className="text-gray-600 mb-6">
-                  You're successfully authenticated and ready to explore the dashboard.
+                  You're successfully authenticated and ready to manage your tasks with groups.
                 </p>
-                <div className="flex gap-4 justify-center">
+                <div className="flex gap-4 justify-center flex-wrap">
                   <Link
-                    to="/dashboard"
+                    to="/tasks"
                     className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
                   >
-                    Go to Dashboard
+                    Go to Tasks
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
+                  >
+                    Dashboard
                   </Link>
                   <button
                     onClick={fetchHealthStatus}
@@ -110,10 +122,10 @@ const Home = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="text-center">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                  Get Started with Authentication
+                  Get Started with Task Management
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  Sign up for a new account or sign in to access your dashboard and explore all features.
+                  Sign up for a new account or sign in to organize your tasks with groups and projects.
                 </p>
                 <div className="flex gap-4 justify-center flex-wrap">
                   <Link
@@ -182,7 +194,7 @@ const Home = () => {
                   <h3 className="font-semibold mb-2">Version</h3>
                   <div className="flex items-center">
                     <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                    <span>{healthStatus.version || '2.0.0'}</span>
+                    <span>{healthStatus.version || '4.0.0'}</span>
                   </div>
                 </div>
               </div>
@@ -238,62 +250,62 @@ const Home = () => {
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              Phase 2 Features
+              Phase 4 Features
             </h2>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="text-blue-500 text-lg font-semibold mb-2">🔐 Authentication</div>
-                <h3 className="font-semibold text-gray-700 mb-2">JWT Security</h3>
+                <div className="text-blue-500 text-lg font-semibold mb-2">📁 Groups</div>
+                <h3 className="font-semibold text-gray-700 mb-2">Project Organization</h3>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Secure user registration</li>
-                  <li>• JWT token management</li>
-                  <li>• Protected routes</li>
-                  <li>• Session persistence</li>
+                  <li>• Create custom groups</li>
+                  <li>• Color-coded projects</li>
+                  <li>• Icon selection</li>
+                  <li>• Task counting</li>
                 </ul>
               </div>
 
               <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="text-green-500 text-lg font-semibold mb-2">🚀 Backend</div>
-                <h3 className="font-semibold text-gray-700 mb-2">Express API</h3>
+                <div className="text-green-500 text-lg font-semibold mb-2">🚀 Sidebar</div>
+                <h3 className="font-semibold text-gray-700 mb-2">Easy Navigation</h3>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• User model with Mongoose</li>
-                  <li>• Password hashing</li>
-                  <li>• Rate limiting</li>
-                  <li>• Input validation</li>
-                </ul>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="text-purple-500 text-lg font-semibold mb-2">⚡ Frontend</div>
-                <h3 className="font-semibold text-gray-700 mb-2">React App</h3>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Auth context provider</li>
-                  <li>• Login/Signup forms</li>
-                  <li>• Route protection</li>
+                  <li>• Group management</li>
+                  <li>• Quick task access</li>
+                  <li>• Visual indicators</li>
                   <li>• Responsive design</li>
                 </ul>
               </div>
 
               <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="text-yellow-500 text-lg font-semibold mb-2">🔒 Security</div>
-                <h3 className="font-semibold text-gray-700 mb-2">Best Practices</h3>
+                <div className="text-purple-500 text-lg font-semibold mb-2">🔄 Move Tasks</div>
+                <h3 className="font-semibold text-gray-700 mb-2">Flexible Organization</h3>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• bcrypt password hashing</li>
-                  <li>• JWT token expiration</li>
-                  <li>• CORS configuration</li>
-                  <li>• Helmet security headers</li>
+                  <li>• Move between groups</li>
+                  <li>• Bulk task movement</li>
+                  <li>• Real-time updates</li>
+                  <li>• Group-specific stats</li>
                 </ul>
               </div>
 
               <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="text-cyan-500 text-lg font-semibold mb-2">🌐 Deployment</div>
-                <h3 className="font-semibold text-gray-700 mb-2">Staging Ready</h3>
+                <div className="text-yellow-500 text-lg font-semibold mb-2">🔐 Security</div>
+                <h3 className="font-semibold text-gray-700 mb-2">Authentication</h3>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Render backend deployment</li>
-                  <li>• Vercel frontend deployment</li>
-                  <li>• Environment variables</li>
-                  <li>• Production builds</li>
+                  <li>• JWT token management</li>
+                  <li>• Protected routes</li>
+                  <li>• Session persistence</li>
+                  <li>• User profiles</li>
+                </ul>
+              </div>
+
+              <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="text-cyan-500 text-lg font-semibold mb-2">⚡ CRUD</div>
+                <h3 className="font-semibold text-gray-700 mb-2">Task Management</h3>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• Create, read, update tasks</li>
+                  <li>• Status tracking</li>
+                  <li>• Priority levels</li>
+                  <li>• Due dates & tags</li>
                 </ul>
               </div>
 
@@ -312,11 +324,11 @@ const Home = () => {
             {/* Quick Stats */}
             <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div className="bg-blue-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-blue-600">2</div>
+                <div className="text-2xl font-bold text-blue-600">4</div>
                 <div className="text-sm text-blue-800">Phases</div>
               </div>
               <div className="bg-green-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-green-600">5+</div>
+                <div className="text-2xl font-bold text-green-600">10+</div>
                 <div className="text-sm text-green-800">API Routes</div>
               </div>
               <div className="bg-purple-50 rounded-lg p-3">
@@ -325,19 +337,19 @@ const Home = () => {
               </div>
               <div className="bg-yellow-50 rounded-lg p-3">
                 <div className="text-2xl font-bold text-yellow-600">✓</div>
-                <div className="text-sm text-yellow-800">Deployed</div>
+                <div className="text-sm text-yellow-800">Groups Ready</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Call to Action */}
-        {!isAuthenticated && !loading && (
+        {!isAuthenticated && (
           <div className="max-w-4xl mx-auto mt-8 text-center">
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-8 text-white">
               <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
               <p className="mb-6 opacity-90">
-                Join thousands of users who are already experiencing seamless authentication with our platform.
+                Join thousands of users who are already organizing their tasks efficiently with groups and projects.
               </p>
               <Link
                 to="/signup"

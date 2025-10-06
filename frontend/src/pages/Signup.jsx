@@ -7,7 +7,7 @@ const Signup = () => {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h1 className="text-center text-3xl font-extrabold text-gray-900">
-            Join Phase 2
+            Join Phase 4
           </h1>
           <p className="mt-2 text-center text-sm text-gray-600">
             Create your account in seconds

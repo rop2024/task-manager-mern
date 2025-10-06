@@ -44,7 +44,7 @@ const SignupForm = () => {
     const result = await signup(submitData);
     
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/tasks');
     } else {
       setError(result.error);
     }

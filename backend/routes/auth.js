@@ -3,6 +3,7 @@ import { body, validationResult } from "express-validator";
 import User from "../models/User.js";
 import { protect } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { initializeUserStats } from "../middleware/statsUpdater.js"; // ✅ FIXED import
 
 const router = express.Router();
 
@@ -55,7 +56,12 @@ router.post('/signup', authLimiter, signupValidation, async (req, res) => {
       });
     }
 
+    // Create user
     const user = await User.create({ name, email, password });
+
+    // ✅ Initialize stats for the new user
+    await initializeUserStats(user._id);
+
     const token = user.getSignedJwtToken();
 
     res.status(201).json({
@@ -154,50 +160,71 @@ router.get('/me', protect, async (req, res) => {
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
 // @access  Private
-router.put('/profile', protect, [
-  body('name')
-    .optional()
-    .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Name must be between 2 and 50 characters')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
+router.put(
+  '/profile',
+  protect,
+  [
+    body('name')
+      .optional()
+      .trim()
+      .isLength({ min: 2, max: 50 })
+      .withMessage('Name must be between 2 and 50 characters')
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
+      const fieldsToUpdate = {};
+      if (req.body.name) fieldsToUpdate.name = req.body.name;
+
+      const user = await User.findByIdAndUpdate(
+        req.user.id,
+        fieldsToUpdate,
+        { new: true, runValidators: true }
+      );
+
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({
         success: false,
-        message: 'Validation failed',
-        errors: errors.array()
+        message: 'Server error during profile update'
       });
     }
-
-    const fieldsToUpdate = {};
-    if (req.body.name) fieldsToUpdate.name = req.body.name;
-
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      fieldsToUpdate,
-      { new: true, runValidators: true }
-    );
-
-    res.json({
-      success: true,
-      message: 'Profile updated successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during profile update'
-    });
   }
+);
+
+// @desc    Auth API info
+// @route   GET /api/auth
+// @access  Public
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Auth API is working',
+    endpoints: [
+      { method: 'POST', path: '/api/auth/signup', description: 'Register a new user' },
+      { method: 'POST', path: '/api/auth/login', description: 'Login a user' },
+      { method: 'GET', path: '/api/auth/me', description: 'Get current user profile (requires token)' },
+      { method: 'PUT', path: '/api/auth/profile', description: 'Update user profile (requires token)' }
+    ],
+    documentation: 'See API documentation for more details'
+  });
 });
 
-// Export router as default
 export default router;

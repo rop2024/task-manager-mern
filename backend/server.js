@@ -5,6 +5,20 @@ import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 
+// Import models - order matters to resolve circular dependencies
+import './models/User.js';
+import './models/Group.js';
+import './models/Task.js';
+import './models/Stats.js';
+
+import taskRoutes from "./routes/tasks.js";
+import groupRoutes from "./routes/groups.js";
+import statsRoutes from "./routes/stats.js";
+import calendarRoutes from "./routes/calendar.js";
+import completedRoutes from "./routes/completed.js";
+import { startReminderScheduler } from "./middleware/reminders.js";
+
+
 dotenv.config();
 
 const app = express();
@@ -62,6 +76,11 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/phase1-db
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes); 
+app.use('/api/groups', groupRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/calendar', calendarRoutes);
+app.use('/api/completed', completedRoutes); // Added completed tasks API
 
 // Enhanced test routes
 app.get('/', (req, res) => {
@@ -140,10 +159,20 @@ app.use('*', (req, res) => {
   });
 });
 
+// Start reminder scheduler (in production only)
+if (process.env.NODE_ENV === 'production') {
+  startReminderScheduler();
+}
+
 app.listen(PORT, () => {
   console.log(`🎯 Backend server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
   console.log(`🌐 Allowed CORS origins:`, allowedOrigins);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔐 Auth routes available at: http://localhost:${PORT}/api/auth`);
+  console.log(`📅 Calendar routes: http://localhost:${PORT}/api/calendar`);
+  console.log(`✅ Completed tasks routes: http://localhost:${PORT}/api/completed`);
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🔔 Reminder scheduler: ACTIVE');
+  }
 });
