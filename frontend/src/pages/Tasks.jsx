@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
 import Sidebar from '../components/layout/Sidebar';
 import TaskForm from '../components/tasks/TaskForm';
@@ -10,6 +11,8 @@ import CompletedTasksPanel from '../components/tasks/CompletedTasksPanel';
 
 const Tasks = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [tasks, setTasks] = useState([]);
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -20,6 +23,10 @@ const Tasks = () => {
   const [editingGroup, setEditingGroup] = useState(null);
   const [showCompletedPanel, setShowCompletedPanel] = useState(false);
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(() => {
+    const saved = localStorage.getItem('sidebarVisible');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
@@ -34,6 +41,9 @@ const Tasks = () => {
       
       if (!selectedGroup && response.data.data.length > 0) {
         setSelectedGroup(response.data.data[0]);
+      } else if (selectedGroup && !response.data.data.find(g => g._id === selectedGroup._id)) {
+        // If the currently selected group no longer exists (e.g., was deleted)
+        setSelectedGroup(response.data.data.length > 0 ? response.data.data[0] : null);
       }
     } catch (error) {
       console.error('Error fetching groups:', error);
@@ -150,6 +160,20 @@ const Tasks = () => {
     }
   };
 
+  const handleUpdateTask = async (taskId, taskData) => {
+    try {
+      const response = await axios.put(`/api/tasks/${taskId}`, taskData);
+      setTasks(prev => prev.map(task => 
+        task._id === taskId ? response.data.data : task
+      ));
+      fetchStats();
+      return response.data.data;
+    } catch (error) {
+      console.error('Error updating task:', error);
+      throw error;
+    }
+  };
+
   const handleDeleteTask = async (taskId) => {
     try {
       await axios.delete(`/api/tasks/${taskId}`);
@@ -206,40 +230,92 @@ const Tasks = () => {
   const activeCount = tasks.length - completedCount;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className={`flex min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Sidebar */}
-      <Sidebar
-        groups={groups}
-        onGroupCreate={handleCreateGroup}
-        onGroupEdit={setEditingGroup}
-        selectedGroup={selectedGroup}
-        onGroupSelect={setSelectedGroup}
-      />
+      {sidebarVisible && (
+        <Sidebar
+          groups={groups}
+          onGroupCreate={handleCreateGroup}
+          onGroupEdit={setEditingGroup}
+          selectedGroup={selectedGroup}
+          onGroupSelect={setSelectedGroup}
+          onGroupDeleted={fetchGroups}
+        />
+      )}
+
+      {/* Fixed Sidebar Toggle (visible only when sidebar is hidden) */}
+      {!sidebarVisible && (
+        <button
+          onClick={() => {
+            setSidebarVisible(true);
+            localStorage.setItem('sidebarVisible', 'true');
+          }}
+          className={`fixed left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-r-lg shadow-md transition-colors z-20
+            ${isDark ? 'bg-blue-800 text-blue-100 hover:bg-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+          title="Show Sidebar"
+          aria-label="Show Sidebar"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      )}
 
       {/* Main Content */}
-      <div className="flex-1 ml-64">
+      <div className={`flex-1 ${sidebarVisible ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
         <div className="py-8 px-8">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {selectedGroup ? (
-                    <div className="flex items-center">
-                      <span 
-                        className="mr-3 text-2xl"
-                        style={{ color: selectedGroup.color }}
-                      >
-                        {selectedGroup.icon}
-                      </span>
-                      {selectedGroup.name}
-                    </div>
-                  ) : 'All Tasks'}
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  {selectedGroup?.description || 'Manage all your tasks across all groups'}
-                  {selectedGroup && ` (${activeCount} active, ${completedCount} completed)`}
-                </p>
+              <div className="flex items-center">
+                {/* Sidebar Toggle Button */}
+                <button 
+                  onClick={() => {
+                    const newValue = !sidebarVisible;
+                    setSidebarVisible(newValue);
+                    localStorage.setItem('sidebarVisible', JSON.stringify(newValue));
+                  }}
+                  className={`mr-4 p-2 rounded-lg transition-colors flex items-center justify-center
+                    ${isDark 
+                      ? sidebarVisible 
+                        ? 'bg-blue-900 text-blue-300 border border-blue-800' 
+                        : 'border border-gray-700 text-gray-300 hover:bg-gray-800' 
+                      : sidebarVisible 
+                        ? 'bg-blue-50 text-blue-600 border border-blue-200' 
+                        : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  aria-label={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+                  title={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className={`h-5 w-5 transition-transform duration-300 ${sidebarVisible ? 'rotate-0' : 'rotate-180'}`} 
+                    viewBox="0 0 20 20" 
+                    fill="currentColor"
+                  >
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    {selectedGroup ? (
+                      <div className="flex items-center">
+                        <span 
+                          className="mr-3 text-2xl"
+                          style={{ color: selectedGroup.color }}
+                        >
+                          {selectedGroup.icon}
+                        </span>
+                        {selectedGroup.name}
+                      </div>
+                    ) : 'All Tasks'}
+                  </h1>
+                  <p className="text-gray-600 mt-2">
+                    {selectedGroup?.description || 'Manage all your tasks across all groups'}
+                    {selectedGroup && ` (${activeCount} active, ${completedCount} completed)`}
+                  </p>
+                </div>
               </div>
               
               <div className="flex space-x-3">
@@ -356,7 +432,46 @@ const Tasks = () => {
         groupId={selectedGroup?._id}
       />
 
-      {/* ... existing modals ... */}
+      {/* Task Form Modal */}
+      {showTaskForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <TaskForm
+            onSubmit={handleCreateTask}
+            onCancel={() => setShowTaskForm(false)}
+            loading={loading}
+            groups={groups}
+            selectedGroupId={selectedGroup?._id}
+          />
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {editingTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <TaskForm
+            task={editingTask}
+            onSubmit={(updatedData) => {
+              handleUpdateTask(editingTask._id, updatedData);
+              setEditingTask(null);
+            }}
+            onCancel={() => setEditingTask(null)}
+            loading={loading}
+            groups={groups}
+          />
+        </div>
+      )}
+
+      {/* Edit Group Modal */}
+      {editingGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <GroupForm
+            group={editingGroup}
+            onSubmit={(data) => handleUpdateGroup(editingGroup._id, data)}
+            onCancel={() => setEditingGroup(null)}
+            loading={loading}
+          />
+        </div>
+      )}
     </div>
   );
 };

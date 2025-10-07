@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 
-const LoginForm = () => {
+const LoginForm = ({ isDark }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -29,7 +29,7 @@ const LoginForm = () => {
     const result = await login(formData);
     
     if (result.success) {
-      navigate('/tasks');
+      navigate('/dashboard');
     } else {
       setError(result.error);
     }
@@ -38,8 +38,8 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
+    <div className={`max-w-md mx-auto ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6`}>
+      <h2 className={`text-2xl font-bold text-center ${isDark ? 'text-white' : 'text-gray-800'} mb-6`}>
         Welcome Back
       </h2>
       
@@ -51,7 +51,7 @@ const LoginForm = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
             Email Address
           </label>
           <input
@@ -61,13 +61,15 @@ const LoginForm = () => {
             value={formData.email}
             onChange={handleChange}
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className={`mt-1 block w-full px-3 py-2 border ${
+              isDark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'
+            } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
             placeholder="Enter your email"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="password" className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
             Password
           </label>
           <input
@@ -77,7 +79,9 @@ const LoginForm = () => {
             value={formData.password}
             onChange={handleChange}
             required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className={`mt-1 block w-full px-3 py-2 border ${
+              isDark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300'
+            } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
             placeholder="Enter your password"
           />
         </div>
@@ -96,9 +100,9 @@ const LoginForm = () => {
       </form>
 
       <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
+        <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
           Don't have an account?{' '}
-          <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/signup" className={`font-medium ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'}`}>
             Sign up here
           </Link>
         </p>
