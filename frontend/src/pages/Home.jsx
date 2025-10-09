@@ -116,6 +116,12 @@ const Home = () => {
                   >
                     Dashboard
                   </Link>
+                  <Link
+                    to="/calendar"
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
+                  >
+                    Calendar
+                  </Link>
                   <button
                     onClick={fetchHealthStatus}
                     className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
