@@ -188,7 +188,7 @@ const Tasks = () => {
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      const response = await axios.put(`/api/tasks/${taskId}/status`, { status: newStatus });
+      const response = await axios.put(`/api/tasks/${taskId}`, { status: newStatus });
       setTasks(prev => prev.map(task => 
         task._id === taskId ? response.data.data : task
       ));
