@@ -1,32 +1,35 @@
-import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
-import dotenv from "dotenv";
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Initialize dotenv
+dotenv.config();
 
 // Import models - order matters to resolve circular dependencies
 import './models/User.js';
 import './models/Group.js';
 import './models/Task.js';
 import './models/Stats.js';
+import './models/InboxItem.js'; // NEW: Import InboxItem model
 
-import taskRoutes from "./routes/tasks.js";
-import groupRoutes from "./routes/groups.js";
-import statsRoutes from "./routes/stats.js";
-import calendarRoutes from "./routes/calendar.js";
-import completedRoutes from "./routes/completed.js";
-import { startReminderScheduler } from "./middleware/reminders.js";
-
-
-dotenv.config();
+// Import routes
+import authRoutes from './routes/auth.js';
+import taskRoutes from './routes/tasks.js';
+import groupRoutes from './routes/groups.js';
+import statsRoutes from './routes/stats.js';
+import calendarRoutes from './routes/calendar.js';
+import completedRoutes from './routes/completed.js';
+import inboxRoutes from './routes/inbox.js'; // NEW: Import inbox routes
+import { startReminderScheduler } from './middleware/reminders.js';
+import { generalLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Import routes
-import authRoutes from "./routes/auth.js";
-import { generalLimiter } from "./middleware/rateLimiter.js";
 
 // CORS configuration - FIXED
 const allowedOrigins = [
@@ -36,7 +39,7 @@ const allowedOrigins = [
 ].filter(Boolean); // Remove any undefined values
 
 app.use(cors({
-  origin: function (origin, callback) {
+  origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
@@ -80,21 +83,20 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
-app.use('/api/completed', completedRoutes); // Added completed tasks API
+app.use('/api/completed', completedRoutes);
+app.use('/api/inbox', inboxRoutes); // NEW: Added inbox routes API
 
 // Enhanced test routes
-app.get('/', (req, res) => {
-  res.json({
-    message: '🚀 Backend is running!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    version: '2.0.0',
-    cors: {
-      allowedOrigins: allowedOrigins,
-      frontendUrl: process.env.FRONTEND_URL
-    }
-  });
-});
+app.get('/', (req, res) => res.json({
+  message: '🚀 Backend is running!',
+  timestamp: new Date().toISOString(),
+  environment: process.env.NODE_ENV,
+  version: '2.0.0',
+  cors: {
+    allowedOrigins,
+    frontendUrl: process.env.FRONTEND_URL
+  }
+}));
 
 app.get('/api/hello', async (req, res) => {
   try {
@@ -112,19 +114,17 @@ app.get('/api/hello', async (req, res) => {
   }
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-    timestamp: new Date().toISOString(),
-    version: '2.0.0',
-    environment: process.env.NODE_ENV,
-    cors: {
-      allowedOrigins: allowedOrigins.length,
-      frontendUrl: process.env.FRONTEND_URL
-    }
-  });
-});
+app.get('/api/health', (req, res) => res.json({
+  status: 'OK',
+  database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+  timestamp: new Date().toISOString(),
+  version: '2.0.0',
+  environment: process.env.NODE_ENV,
+  cors: {
+    allowedOrigins: allowedOrigins.length,
+    frontendUrl: process.env.FRONTEND_URL
+  }
+}));
 
 // CORS pre-flight for all routes
 app.options('*', cors());
@@ -138,7 +138,7 @@ app.use((err, req, res, next) => {
     return res.status(403).json({ 
       success: false,
       error: 'CORS policy: Origin not allowed',
-      allowedOrigins: allowedOrigins
+      allowedOrigins
     });
   }
   
@@ -150,14 +150,12 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    success: false,
-    error: 'Route not found',
-    path: req.originalUrl,
-    method: req.method
-  });
-});
+app.use('*', (req, res) => res.status(404).json({ 
+  success: false,
+  error: 'Route not found',
+  path: req.originalUrl,
+  method: req.method
+}));
 
 // Start reminder scheduler (in production only)
 if (process.env.NODE_ENV === 'production') {
@@ -165,14 +163,17 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.listen(PORT, () => {
-  console.log(`🎯 Backend server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 Allowed CORS origins:`, allowedOrigins);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🔐 Auth routes available at: http://localhost:${PORT}/api/auth`);
-  console.log(`📅 Calendar routes: http://localhost:${PORT}/api/calendar`);
-  console.log(`✅ Completed tasks routes: http://localhost:${PORT}/api/completed`);
-  if (process.env.NODE_ENV === 'production') {
-    console.log('🔔 Reminder scheduler: ACTIVE');
-  }
+  const messages = [
+    `🎯 Backend server running on port ${PORT}`,
+    `📍 Environment: ${process.env.NODE_ENV}`,
+    `🌐 Allowed CORS origins: ${allowedOrigins.join(', ')}`,
+    `🔗 Health check: http://localhost:${PORT}/api/health`,
+    `🔐 Auth routes available at: http://localhost:${PORT}/api/auth`,
+    `📅 Calendar routes: http://localhost:${PORT}/api/calendar`,
+    `✅ Completed tasks routes: http://localhost:${PORT}/api/completed`,
+    `📥 Inbox routes: http://localhost:${PORT}/api/inbox`,
+    ...(process.env.NODE_ENV === 'production' ? ['🔔 Reminder scheduler: ACTIVE'] : [])
+  ];
+  
+  messages.forEach(message => console.log(message));
 });

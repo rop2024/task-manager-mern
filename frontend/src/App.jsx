@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import './index.css';
 import Calendar from './pages/Calendar';
+import Inbox from './pages/Inbox';
 
 
 // Updated Home component with navigation
@@ -87,6 +88,12 @@ function HomePage() {
                     className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
                   >
                     Calendar
+                  </a>
+                  <a
+                    href="/inbox"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
+                  >
+                    Inbox
                   </a>
                 </div>
               </div>
@@ -199,6 +206,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Calendar />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/inbox" 
+              element={
+                <ProtectedRoute>
+                  <Inbox />
                 </ProtectedRoute>
               } 
             />

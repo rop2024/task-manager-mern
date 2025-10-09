@@ -1,16 +1,22 @@
 import mongoose from 'mongoose';
 
+// Define the Task schema
 const taskSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true
+  },
   title: {
     type: String,
-    required: [true, 'Please add a task title'],
+    required: [true, 'Task title is required'],
     trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
+    maxlength: [200, 'Title cannot be more than 200 characters']
   },
   description: {
     type: String,
     trim: true,
-    maxlength: [500, 'Description cannot be more than 500 characters']
+    maxlength: [5000, 'Description cannot be more than 5000 characters']
   },
   status: {
     type: String,
@@ -46,20 +52,27 @@ const taskSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  user: {
-    type: mongoose.Schema.ObjectId,
-    ref: 'User',
-    required: true
-  },
   group: {
     type: mongoose.Schema.ObjectId,
-    ref: 'Group',
-    required: true
+    ref: 'Group'
+  },
+  // NEW: Reference to original inbox item
+  inboxRef: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'InboxItem'
   },
   tags: [{
     type: String,
     trim: true
   }],
+  estimatedMinutes: {
+    type: Number,
+    min: 0
+  },
+  actualMinutes: {
+    type: Number,
+    min: 0
+  },
   isImportant: {
     type: Boolean,
     default: false
@@ -94,14 +107,13 @@ taskSchema.index({ user: 1, status: 1, dueAt: 1 });
 taskSchema.index({ user: 1, status: 1, completedAt: -1 });
 taskSchema.index({ user: 1, completedAt: -1 });
 
-// Virtual for overdue status
-taskSchema.virtual('isOverdue').get(function() {
+// Virtual getters using ES6 syntax
+taskSchema.virtual('isOverdue').get(() => {
   if (!this.dueAt || this.status === 'completed') return false;
   return this.dueAt < new Date();
 });
 
-// Virtual for days until due
-taskSchema.virtual('daysUntilDue').get(function() {
+taskSchema.virtual('daysUntilDue').get(() => {
   if (!this.dueAt) return null;
   const now = new Date();
   const due = new Date(this.dueAt);
@@ -109,8 +121,7 @@ taskSchema.virtual('daysUntilDue').get(function() {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 });
 
-// Virtual for days since completion
-taskSchema.virtual('daysSinceCompletion').get(function() {
+taskSchema.virtual('daysSinceCompletion').get(() => {
   if (!this.completedAt) return null;
   const now = new Date();
   const completed = new Date(this.completedAt);
@@ -118,111 +129,105 @@ taskSchema.virtual('daysSinceCompletion').get(function() {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 });
 
-// Method to check if reminder is due
-taskSchema.methods.isReminderDue = function() {
-  if (!this.reminders || this.reminders.length === 0) return false;
-  
-  const now = new Date();
-  return this.reminders.some(reminder => {
-    const reminderTime = new Date(reminder);
-    return reminderTime <= now && reminderTime > new Date(now - 5 * 60 * 1000); // Within last 5 minutes
-  });
-};
+// Instance methods using ES6 syntax
+Object.assign(taskSchema.methods, {
+  isReminderDue() {
+    if (!this.reminders?.length) return false;
+    
+    const now = new Date();
+    return this.reminders.some(reminder => {
+      const reminderTime = new Date(reminder);
+      return reminderTime <= now && reminderTime > new Date(now - 5 * 60 * 1000); // Within last 5 minutes
+    });
+  },
 
-// Method to mark task as completed
-taskSchema.methods.markAsCompleted = function() {
-  this.status = 'completed';
-  this.completedAt = new Date();
-  // Clear any pending reminders
-  this.reminders = this.reminders.filter(reminder => new Date(reminder) > new Date());
-  return this.save();
-};
-
-// Method to revive task (mark as pending)
-taskSchema.methods.revive = function() {
-  this.status = 'pending';
-  this.completedAt = undefined;
-  return this.save();
-};
-
-// Method to toggle completion status
-taskSchema.methods.toggleCompletion = function() {
-  if (this.status === 'completed') {
-    return this.revive();
-  } else {
-    return this.markAsCompleted();
-  }
-};
-
-// Pre-save middleware to handle completion and dueAt updates
-taskSchema.pre('save', function(next) {
-  // Set completedAt when task is marked completed
-  if (this.isModified('status') && this.status === 'completed' && !this.completedAt) {
+  markAsCompleted() {
+    this.status = 'completed';
     this.completedAt = new Date();
-  }
-  
-  // Clear completedAt when task is revived
-  if (this.isModified('status') && this.status !== 'completed' && this.completedAt) {
+    // Clear any pending reminders
+    this.reminders = this.reminders.filter(reminder => new Date(reminder) > new Date());
+    return this.save();
+  },
+
+  revive() {
+    this.status = 'pending';
     this.completedAt = undefined;
+    return this.save();
+  },
+
+  toggleCompletion() {
+    return this.status === 'completed' ? this.revive() : this.markAsCompleted();
+  }
+});
+
+// Pre-save middleware using ES6 syntax
+taskSchema.pre('save', async function(next) {
+  // Set completedAt when task is marked completed
+  if (this.isModified('status')) {
+    if (this.status === 'completed' && !this.completedAt) {
+      this.completedAt = new Date();
+    } else if (this.status !== 'completed' && this.completedAt) {
+      this.completedAt = undefined;
+    }
   }
   
-  // If dueAt is set but startAt isn't, set startAt to now
+  // Auto-set startAt if only dueAt is provided
   if (this.dueAt && !this.startAt) {
     this.startAt = new Date();
   }
   
-  // For backward compatibility
+  // Backward compatibility: dueDate -> dueAt
   if (this.dueDate && !this.dueAt) {
     this.dueAt = this.dueDate;
   }
   
-  // If task is completed and has recurrence, create next occurrence
-  if (this.isModified('status') && this.status === 'completed' && this.recurrence?.pattern !== 'none') {
-    this.handleRecurrence().catch(console.error);
+  // Handle recurrence for completed tasks
+  if (this.isModified('status') && 
+      this.status === 'completed' && 
+      this.recurrence?.pattern !== 'none') {
+    await this.handleRecurrence().catch(console.error);
   }
   
   next();
 });
 
-// Method to handle task recurrence
+// Method to handle task recurrence using ES6 syntax
 taskSchema.methods.handleRecurrence = async function() {
-  if (!this.recurrence || this.recurrence.pattern === 'none') return;
+  if (!this.recurrence?.pattern || this.recurrence.pattern === 'none') return;
 
   const nextDate = new Date(this.startAt);
+  const { interval = 1 } = this.recurrence;
   
-  switch (this.recurrence.pattern) {
-    case 'daily':
-      nextDate.setDate(nextDate.getDate() + this.recurrence.interval);
-      break;
-    case 'weekly':
-      nextDate.setDate(nextDate.getDate() + (7 * this.recurrence.interval));
-      break;
-    case 'monthly':
-      nextDate.setMonth(nextDate.getMonth() + this.recurrence.interval);
-      break;
-    case 'yearly':
-      nextDate.setFullYear(nextDate.getFullYear() + this.recurrence.interval);
-      break;
-  }
+  // Calculate next occurrence date
+  const dateCalculators = {
+    daily: () => nextDate.setDate(nextDate.getDate() + interval),
+    weekly: () => nextDate.setDate(nextDate.getDate() + (7 * interval)),
+    monthly: () => nextDate.setMonth(nextDate.getMonth() + interval),
+    yearly: () => nextDate.setFullYear(nextDate.getFullYear() + interval)
+  };
 
-  // Check if we should stop recurring
+  dateCalculators[this.recurrence.pattern]?.();
+
+  // Check recurrence end conditions
   const shouldStop = (this.recurrence.endDate && nextDate > this.recurrence.endDate) ||
                     (this.recurrence.count && this.recurrence.count <= 1);
 
   if (shouldStop) return;
 
-  // Create next occurrence
+  // Create next occurrence with ES6 object spread
   const Task = mongoose.model('Task');
   const nextTask = new Task({
     ...this.toObject(),
     _id: undefined,
     status: 'pending',
     startAt: nextDate,
-    dueAt: this.dueAt ? new Date(this.dueAt.getTime() + (nextDate - this.startAt)) : undefined,
-    reminders: this.reminders?.map(reminder => new Date(reminder.getTime() + (nextDate - this.startAt))),
+    dueAt: this.dueAt && new Date(this.dueAt.getTime() + (nextDate - this.startAt)),
+    reminders: this.reminders?.map(reminder => 
+      new Date(reminder.getTime() + (nextDate - this.startAt))
+    ),
     recurrence: {
       ...this.recurrence,
-      count: this.recurrence.count ? this.recurrence.count - 1 : undefined
+      count: this.recurrence.count > 1 ? this.recurrence.count - 1 : undefined
     }
   });
 
@@ -258,7 +263,7 @@ taskSchema.statics.getTaskStats = async function(userId) {
 
   return defaultStats;
 };
-// Update task count in group when task is saved
+// Post-save and post-delete hooks using ES6 syntax
 taskSchema.post('save', async function() {
   try {
     const Group = mongoose.model('Group');
@@ -268,15 +273,14 @@ taskSchema.post('save', async function() {
   }
 });
 
-// Update task count in group when task is removed
 taskSchema.post('findOneAndDelete', async function(doc) {
-  if (doc) {
-    try {
-      const Group = mongoose.model('Group');
-      await Group.updateTaskCount(doc.group);
-    } catch (error) {
-      console.error('Error updating group task count after deletion:', error);
-    }
+  if (!doc) return;
+  
+  try {
+    const Group = mongoose.model('Group');
+    await Group.updateTaskCount(doc.group);
+  } catch (error) {
+    console.error('Error updating group task count after deletion:', error);
   }
 });
 
@@ -445,4 +449,146 @@ taskSchema.statics.getUpcomingReminders = async function(userId, hours = 24) {
 taskSchema.set('toJSON', { virtuals: true });
 taskSchema.set('toObject', { virtuals: true });
 
+// Add static methods using ES6 syntax
+Object.assign(taskSchema.statics, {
+  async getTaskStats(userId, groupId = null) {
+    const match = { 
+      user: new mongoose.Types.ObjectId(userId),
+      ...(groupId && { group: new mongoose.Types.ObjectId(groupId) })
+    };
+
+    const [stats, total] = await Promise.all([
+      this.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      this.countDocuments(match)
+    ]);
+    
+    const defaultStats = {
+      pending: 0,
+      'in-progress': 0,
+      completed: 0,
+      total
+    };
+
+    return stats.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), defaultStats);
+  },
+
+  async getCompletedTasks(userId, { group, daysAgo, limit = 50, page = 1 } = {}) {
+    const query = { 
+      user: userId, 
+      status: 'completed',
+      ...(group && { group }),
+      ...(daysAgo && { 
+        completedAt: { 
+          $gte: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000) 
+        } 
+      })
+    };
+
+    const skip = (page - 1) * limit;
+
+    const [tasks, total] = await Promise.all([
+      this.find(query)
+        .populate('group', 'name color icon')
+        .sort({ completedAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      this.countDocuments(query)
+    ]);
+
+    return {
+      tasks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  },
+
+  async bulkComplete(userId, taskIds) {
+    return this.updateMany(
+      {
+        _id: { $in: taskIds },
+        user: userId,
+        status: { $ne: 'completed' }
+      },
+      {
+        status: 'completed',
+        completedAt: new Date(),
+        $set: { reminders: [] }
+      }
+    );
+  },
+
+  async bulkRevive(userId, taskIds) {
+    return this.updateMany(
+      {
+        _id: { $in: taskIds },
+        user: userId,
+        status: 'completed'
+      },
+      {
+        status: 'pending',
+        $unset: { completedAt: 1 }
+      }
+    );
+  },
+
+  async cleanupCompletedTasks(userId, daysOld = 30) {
+    const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+    
+    return this.deleteMany({
+      user: userId,
+      status: 'completed',
+      completedAt: { $lt: cutoffDate }
+    });
+  },
+
+  async getCalendarTasks(userId, startDate, endDate) {
+    return this.find({
+      user: userId,
+      $or: [
+        { startAt: { $gte: startDate, $lte: endDate } },
+        { dueAt: { $gte: startDate, $lte: endDate } },
+        { 
+          $and: [
+            { startAt: { $lte: startDate } },
+            { dueAt: { $gte: endDate } }
+          ]
+        }
+      ]
+    }).populate('group', 'name color icon');
+  },
+
+  async getUpcomingReminders(userId, hours = 24) {
+    const now = new Date();
+    const reminderThreshold = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    
+    return this.find({
+      user: userId,
+      status: { $ne: 'completed' },
+      reminders: {
+        $elemMatch: {
+          $gte: now,
+          $lte: reminderThreshold
+        }
+      }
+    }).populate('group', 'name color');
+  }
+});
+
+// Configure schema options
+taskSchema.set('toJSON', { virtuals: true });
+taskSchema.set('toObject', { virtuals: true });
+
+// Export the model using ES6 export
 export default mongoose.model('Task', taskSchema);
