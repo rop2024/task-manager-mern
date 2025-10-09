@@ -10,12 +10,14 @@ import './models/User.js';
 import './models/Group.js';
 import './models/Task.js';
 import './models/Stats.js';
+import './models/QuickTask.js';
 
 import taskRoutes from "./routes/tasks.js";
 import groupRoutes from "./routes/groups.js";
 import statsRoutes from "./routes/stats.js";
 import calendarRoutes from "./routes/calendar.js";
 import completedRoutes from "./routes/completed.js";
+import quickTaskRoutes from "./routes/quickTasks.js";
 import { startReminderScheduler } from "./middleware/reminders.js";
 
 
@@ -81,6 +83,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/completed', completedRoutes); // Added completed tasks API
+app.use('/api/quickTasks', quickTaskRoutes); // Added quick tasks API
 
 // Enhanced test routes
 app.get('/', (req, res) => {
