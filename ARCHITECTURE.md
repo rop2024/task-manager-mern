@@ -28,6 +28,62 @@ The Task Manager is a modern full-stack application built with the MERN stack (M
 
 ## System Architecture
 
+### Inbox System Architecture
+
+#### Overview
+The Inbox System provides a temporary holding area for quick ideas and notes that can be converted into formal tasks. It features a sidebar interface with reliable deletion and retry mechanisms, designed for rapid idea capture and organization.
+
+#### Core Features
+- **Quick Capture**: Minimal friction idea recording
+- **Sidebar Integration**: Real-time inbox item display
+- **Reliable Deletion**: Retry mechanisms with exponential backoff
+- **Task Promotion**: Convert inbox items to structured tasks
+- **Performance Optimized**: Efficient queries with strategic indexing
+
+#### Backend Architecture
+
+**API Endpoints**:
+
+| Endpoint | Method | Auth | Description | Response Format |
+|----------|--------|------|-------------|-----------------|
+| `/api/inbox/sidebar` | GET | ✅ | Fetch user's inbox items for sidebar | `{ success, data[], count, message }` |
+| `/api/inbox/:id/deleteManual` | POST | ✅ | Delete inbox item with retry logic | `{ success, message, data: { deletedItemId, deletedAt } }` |
+| `/api/inbox/sidebar/limited` | GET | ✅ | Get limited inbox items (pagination) | `{ success, data[], count, limit, message }` |
+| `/api/inbox/sidebar/count` | GET | ✅ | Get inbox items count for badges | `{ success, data: { count }, message }` |
+
+**Data Model**:
+```javascript
+InboxItem {
+  // Dual field support for migration compatibility
+  user: ObjectId (ref: 'User', required, indexed),
+  userId: ObjectId (ref: 'User', required, indexed),
+  
+  // Content with flexible field options
+  title: String (required, 1-200 chars),
+  notes: String (optional, max: 1000 chars),
+  content: String (optional, max: 5000 chars),
+  
+  // Soft deletion support
+  isDeleted: Boolean (default: false, indexed),
+  deletedAt: Date,
+  deletedBy: ObjectId (ref: 'User'),
+  
+  // Task promotion tracking
+  isPromoted: Boolean (default: false),
+  promotedAt: Date,
+  
+  // Automatic timestamps
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**Key Features**:
+- **Robust Deletion**: `safeDelete()` method with retry logic and exponential backoff
+- **Performance Indexing**: Strategic indexes for efficient sidebar queries
+- **Dual Field Support**: Backward compatibility with both `user` and `userId` fields
+- **Query Optimization**: `.lean()` queries with `.maxTimeMS()` timeout protection
+
 ### High-Level Architecture Diagram
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -351,16 +407,43 @@ frontend/
 #### 3. InboxItem Model (`models/InboxItem.js`)
 ```javascript
 {
-  user: ObjectId (ref: 'User', required),
+  // User References (dual field support)
+  user: ObjectId (ref: 'User', required, indexed),
+  userId: ObjectId (ref: 'User', required, indexed),
+  
+  // Content Fields
   title: String (required, max: 200),
   notes: String (max: 1000),
+  content: String (max: 5000),
+  
+  // Status Tracking
   isPromoted: Boolean (default: false),
-  promotedAt: Date
+  promotedAt: Date,
+  isDeleted: Boolean (default: false, indexed),
+  deletedAt: Date,
+  deletedBy: ObjectId (ref: 'User'),
+  
+  // Timestamps
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
+**Indexes**: 
+- `{ user: 1, createdAt: -1 }` - User inbox listing
+- `{ userId: 1, createdAt: -1 }` - Alternative user field
+- `{ userId: 1, isDeleted: 1, createdAt: -1 }` - Efficient filtering
+
 **Virtual Fields**: `daysInInbox` - Days since creation
-**Methods**: `markAsPromoted()` - Mark as converted to task
-**Static Methods**: `getInboxStats(userId)` - Inbox analytics
+
+**Instance Methods**: 
+- `markAsPromoted()` - Mark as converted to task
+
+**Static Methods**: 
+- `getInboxStats(userId)` - Inbox analytics
+- `safeDelete(itemId, userId)` - Robust deletion with retry logic
+- `safeHardDelete(itemId, userId)` - Permanent deletion
+- `getSidebarItems(userId, options)` - Sidebar data retrieval
+- `getSidebarCount(userId)` - Item count for badges
 
 #### 4. Group Model (`models/Group.js`)
 ```javascript
@@ -504,15 +587,19 @@ Response: 201 Created
 | DELETE | `/groups/:id` | Delete group |
 
 ### Inbox System (`/api/inbox`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/inbox` | List inbox items |
-| POST | `/inbox` | Create inbox item |
-| GET | `/inbox/:id` | Get inbox item |
-| PUT | `/inbox/:id` | Update inbox item |
-| DELETE | `/inbox/:id` | Delete inbox item |
-| POST | `/inbox/:id/promote` | Promote to task |
-| GET | `/inbox/stats` | Inbox statistics |
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/inbox` | List inbox items | Yes |
+| POST | `/inbox` | Create inbox item | Yes |
+| GET | `/inbox/:id` | Get inbox item | Yes |
+| PUT | `/inbox/:id` | Update inbox item | Yes |
+| DELETE | `/inbox/:id` | Delete inbox item | Yes |
+| POST | `/inbox/:id/promote` | Promote to task | Yes |
+| POST | `/inbox/:id/deleteManual` | Delete with retry logic | Yes |
+| GET | `/inbox/stats` | Inbox statistics | Yes |
+| GET | `/inbox/sidebar` | Get sidebar items | Yes |
+| GET | `/inbox/sidebar/limited` | Get limited sidebar items | Yes |
+| GET | `/inbox/sidebar/count` | Get items count | Yes |
 
 ### Calendar Integration (`/api/calendar`)
 | Method | Endpoint | Description | Parameters |
@@ -1693,6 +1780,58 @@ reminderQueue.process('send-reminder', async (job) => {
 })
 ```
 
+### Inbox System Reliability Architecture
+
+#### Retry Mechanism Implementation
+The inbox system implements sophisticated retry logic for robust operation:
+
+```javascript
+// Exponential backoff configuration
+const RETRY_CONFIG = {
+  MAX_RETRIES: 3,
+  BASE_DELAY: 500, // ms
+  MAX_DELAY: 2000, // ms
+  JITTER: 0.2 // 20% random jitter
+}
+
+// Retry logic with transaction support
+async safeDelete(itemId, userId, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const session = await mongoose.startSession()
+      session.startTransaction()
+      
+      const result = await this.findOneAndUpdate(
+        { _id: itemId, $or: [{ user: userId }, { userId: userId }], isDeleted: false },
+        { $set: { isDeleted: true, deletedAt: new Date(), deletedBy: userId }},
+        { new: true, session, runValidators: true }
+      )
+      
+      await session.commitTransaction()
+      return { success: true, deletedItem: result }
+    } catch (error) {
+      await session.abortTransaction()
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, calculateDelay(attempt)))
+      }
+    }
+  }
+  return { success: false, message: 'Failed after all retries' }
+}
+```
+
+#### Frontend Reliability Features
+- **Optimistic Updates**: Immediate UI feedback with server sync
+- **Retry Indicators**: Visual feedback for retry attempts
+- **Error Recovery**: Graceful degradation and user-friendly error messages
+- **State Management**: Consistent state across retry cycles
+
+#### Performance Optimizations
+- **Query Timeouts**: `.maxTimeMS(10000)` prevents hanging requests
+- **Lean Queries**: `.lean()` returns plain objects for better performance
+- **Strategic Indexing**: Compound indexes for efficient filtering
+- **Minimal Projections**: Select only required fields for sidebar display
+
 ### Performance Monitoring & Observability
 
 #### Application Performance Monitoring
@@ -2566,9 +2705,15 @@ git push origin feature/new-feature-name
 | `layout/` | Navigation, Sidebar, ThemeToggle | App layout structure |
 | `tasks/` | TaskList, TaskItem, TaskForm, QuickAdd | Task management UI |
 | `calendar/` | CalendarView, CalendarTaskForm, RemindersList | Calendar features |
-| `inbox/` | InboxItem, InboxStats, QuickAddInput | Inbox management |
+| `inbox/` | InboxItemCard, InboxSidebar, InboxStats, QuickAddInput | Inbox management with retry UI |
 | `group/` | GroupForm | Group creation/editing |
 | `scoreboard/` | StatsOverview, Leaderboard, ProductivityScore | Analytics dashboard |
+
+**Inbox System Components Detail**:
+- `InboxItemCard`: Individual inbox item with delete functionality and retry states
+- `InboxSidebar`: Main sidebar container with real-time updates and error handling
+- `InboxStats`: Analytics and metrics for captured ideas
+- `QuickAddInput`: Rapid idea capture interface
 
 #### Context Providers (`frontend/src/context/`)
 | Context | State Management |
@@ -2675,6 +2820,37 @@ npm run preview            # Preview production build
 - **Rate Limiting**: Protection against abuse
 - **CORS**: Controlled cross-origin access
 - **Security Headers**: Helmet middleware protection
+
+### Inbox System Implementation Summary
+
+The Inbox System represents a robust implementation of temporary idea storage with the following key characteristics:
+
+#### Technical Highlights
+- **Dual Field Architecture**: Supports both `user` and `userId` fields for seamless migration
+- **Advanced Retry Logic**: Implements exponential backoff with jitter for reliable operations
+- **Performance Optimized**: Strategic indexing and query optimization for sidebar performance
+- **Transaction Safety**: MongoDB transactions ensure data consistency during operations
+- **Error Resilience**: Comprehensive error handling with user-friendly feedback
+
+#### API Design Patterns
+- **RESTful Endpoints**: Following REST principles with clear resource-based URLs
+- **Consistent Response Format**: Standardized `{ success, data, message }` response structure
+- **Authentication Integration**: JWT-based protection on all endpoints
+- **Query Optimization**: Timeout protection and lean queries for optimal performance
+
+#### Frontend Integration
+- **Real-time Updates**: Immediate UI feedback with background synchronization
+- **Retry State Management**: Visual indicators for retry attempts and failure states
+- **Toast Notifications**: User-friendly feedback system for operations
+- **Optimistic Updates**: Immediate UI response with server validation
+
+#### Data Flow Architecture
+```
+User Action (Delete) → Frontend Optimistic Update → API Call with Retry Logic → 
+Database Transaction → Success/Failure Response → UI State Reconciliation
+```
+
+This implementation provides a solid foundation for idea capture and management while maintaining high reliability and performance standards.
 
 ---
 

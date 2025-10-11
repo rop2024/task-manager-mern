@@ -157,17 +157,57 @@ const TaskForm = ({ task, onSave, onCancel, groups = [], selectedGroupId = '' })
   const isDraft = task?.status === 'draft';
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full border border-gray-200">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
-          {task ? (isDraft ? 'Edit Draft Task' : 'Edit Task') : 'Create New Task'}
-        </h2>
-        {isDraft && (
-          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
-            DRAFT
-          </span>
+    <div className="max-w-2xl">
+      {/* Back Button */}
+      <button
+        onClick={onCancel}
+        className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6 transition-colors"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <span>Back to tasks</span>
+      </button>
+
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full border border-gray-200">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {task ? (isDraft ? 'Edit Draft Task' : 'Edit Task') : 'Create New Task'}
+          </h2>
+          {isDraft && (
+            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+              DRAFT
+            </span>
+          )}
+        </div>
+
+        {/* Inbox Reference Card - only show when creating new tasks */}
+        {!task && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-blue-900 text-sm mb-1">
+                  Need inspiration?
+                </h3>
+                <p className="text-blue-700 text-sm">
+                  Check your inbox sidebar for ideas. Once you create a task from an inbox item, 
+                  don't forget to <strong>delete the inbox item</strong> to keep things organized.
+                </p>
+                <div className="flex items-center space-x-2 mt-2 text-blue-600">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m16 0l-2-2m0 0l-2 2m2-2v4" />
+                  </svg>
+                  <span className="text-xs font-medium">Inbox items make great task starters!</span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
-      </div>
 
       {/* Display general errors */}
       {errors?.general && (
@@ -423,6 +463,7 @@ const TaskForm = ({ task, onSave, onCancel, groups = [], selectedGroupId = '' })
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 };

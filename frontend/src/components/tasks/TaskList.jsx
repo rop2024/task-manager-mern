@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getTasksWithDrafts } from '../../api/tasks';
 import TaskItem from './TaskItem';
 import QuickAddTask from './QuickAddTask';
+import axios from 'axios';
 
 const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
   const [tasks, setTasks] = useState([]);
@@ -12,6 +13,42 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
   useEffect(() => {
     loadTasks();
   }, [refreshFlag, showDrafts]);
+
+  const handleTaskComplete = async (taskId) => {
+    try {
+      const response = await axios.put(`/api/tasks/${taskId}/complete`);
+      if (response.data.success) {
+        setTasks(prev => prev.filter(task => task._id !== taskId));
+        setRefreshFlag(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'text-red-600 bg-red-50 border-red-200';
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'low': return 'text-green-600 bg-green-50 border-green-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const isOverdue = (dueDate) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
+  };
 
   const loadTasks = async () => {
     try {
@@ -117,22 +154,24 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
             </div>
           </div>
 
-          {/* Filter Dropdown */}
-          <div className="flex items-center space-x-2">
-            <label htmlFor="task-filter" className="text-sm font-medium text-gray-700">
-              Filter:
-            </label>
-            <select 
-              id="task-filter"
-              value={filter} 
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
-            >
-              <option value="all">All Tasks</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="drafts">Drafts</option>
-            </select>
+          {/* Filter Dropdown and View Toggle */}
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <label htmlFor="task-filter" className="text-sm font-medium text-gray-700">
+                Filter:
+              </label>
+              <select 
+                id="task-filter"
+                value={filter} 
+                onChange={(e) => setFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+              >
+                <option value="all">All Tasks</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="drafts">Drafts</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -188,14 +227,22 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
                 </>
               ) : (
                 <>
-                  <div className="text-6xl mb-4">✨</div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">No tasks found</h3>
-                  <p className="text-gray-600 mb-6">Create your first task using the quick capture above</p>
-                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <div className="bg-gray-100 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                    <svg className="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>Tip: Press Enter in the input above for quick capture</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">No tasks found</h3>
+                  <p className="text-gray-600 mb-6">Create your first task using the quick capture above. Remember to check your inbox for ideas and inspiration!</p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                    <div className="flex items-center space-x-2 text-blue-700">
+                      <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <p className="text-sm">
+                        <strong>Tip:</strong> Your inbox items can be converted into tasks. Keep both lists organized!
+                      </p>
+                    </div>
                   </div>
                 </>
               )}
