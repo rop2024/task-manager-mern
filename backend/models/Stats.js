@@ -28,6 +28,11 @@ const statsSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Quick capture tasks (including drafts)
+  quickCaptureTasks: {
+    type: Number,
+    default: 0
+  },
   // Priority breakdown
   highPriorityTasks: {
     type: Number,
@@ -124,32 +129,65 @@ statsSchema.statics.calculateProductivityScore = function(stats) {
 };
 
 // Update stats when tasks change
-statsSchema.statics.updateUserStats = async function(userId) {
+statsSchema.statics.updateUserStats = async function(userId, providedStats = null) {
   try {
     const Task = mongoose.model('Task');
     const Group = mongoose.model('Group');
-    // Get task counts
-    const taskCounts = await Task.aggregate([
-      { $match: { user: new mongoose.Types.ObjectId(userId) } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
-          pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
-          inProgress: { $sum: { $cond: [{ $eq: ['$status', 'in-progress'] }, 1, 0] } },
-          highPriority: { $sum: { $cond: [{ $eq: ['$priority', 'high'] }, 1, 0] } },
-          mediumPriority: { $sum: { $cond: [{ $eq: ['$priority', 'medium'] }, 1, 0] } },
-          lowPriority: { $sum: { $cond: [{ $eq: ['$priority', 'low'] }, 1, 0] } }
+    
+    let taskCounts, quickCaptureCount;
+    
+    if (providedStats) {
+      // Use provided stats if available (more efficient)
+      taskCounts = [{
+        total: providedStats.totalTasks,
+        completed: providedStats.completedTasks,
+        pending: providedStats.pendingTasks,
+        inProgress: providedStats.inProgressTasks
+      }];
+      quickCaptureCount = providedStats.quickCaptureTasks;
+    } else {
+      // Calculate stats from database
+      taskCounts = await Task.aggregate([
+        { $match: { 
+          $or: [
+            { user: new mongoose.Types.ObjectId(userId) },
+            { createdBy: new mongoose.Types.ObjectId(userId) }
+          ]
+        }},
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $cond: [{ $ne: ['$status', 'draft'] }, 1, 0] } }, // Exclude drafts
+            completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+            pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+            inProgress: { $sum: { $cond: [{ $eq: ['$status', 'in-progress'] }, 1, 0] } },
+            highPriority: { $sum: { $cond: [{ $eq: ['$priority', 'high'] }, 1, 0] } },
+            mediumPriority: { $sum: { $cond: [{ $eq: ['$priority', 'medium'] }, 1, 0] } },
+            lowPriority: { $sum: { $cond: [{ $eq: ['$priority', 'low'] }, 1, 0] } }
+          }
         }
-      }
-    ]);
+      ]);
 
-    // Get overdue tasks
+      // Count quick capture tasks separately (including drafts)
+      quickCaptureCount = await Task.countDocuments({
+        $or: [
+          { user: userId, isQuickCapture: true },
+          { createdBy: userId, isQuickCapture: true }
+        ]
+      });
+    }
+
+    // Get overdue tasks (exclude drafts)
     const overdueCount = await Task.countDocuments({
-      user: userId,
-      dueDate: { $lt: new Date() },
-      status: { $ne: 'completed' }
+      $or: [
+        { user: userId },
+        { createdBy: userId }
+      ],
+      $or: [
+        { dueDate: { $lt: new Date() } },
+        { dueAt: { $lt: new Date() } }
+      ],
+      status: { $nin: ['completed', 'draft'] }
     });
 
     // Get group count
@@ -160,13 +198,19 @@ statsSchema.statics.updateUserStats = async function(userId) {
     const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const weeklyCompleted = await Task.countDocuments({
-      user: userId,
+      $or: [
+        { user: userId },
+        { createdBy: userId }
+      ],
       status: 'completed',
       updatedAt: { $gte: oneWeekAgo }
     });
 
     const monthlyCompleted = await Task.countDocuments({
-      user: userId,
+      $or: [
+        { user: userId },
+        { createdBy: userId }
+      ],
       status: 'completed',
       updatedAt: { $gte: oneMonthAgo }
     });
@@ -177,7 +221,10 @@ statsSchema.statics.updateUserStats = async function(userId) {
 
     // Calculate streaks (simplified version)
     const completedTasks = await Task.find({
-      user: userId,
+      $or: [
+        { user: userId },
+        { createdBy: userId }
+      ],
       status: 'completed'
     }).sort({ updatedAt: -1 }).limit(10);
 
@@ -206,7 +253,10 @@ statsSchema.statics.updateUserStats = async function(userId) {
     // Calculate average completion time (simplified)
     let averageCompletionTime = 0;
     const completedTasksWithTime = await Task.find({
-      user: userId,
+      $or: [
+        { user: userId },
+        { createdBy: userId }
+      ],
       status: 'completed',
       createdAt: { $exists: true },
       updatedAt: { $exists: true }
@@ -227,6 +277,7 @@ statsSchema.statics.updateUserStats = async function(userId) {
       pendingTasks: counts.pending || 0,
       inProgressTasks: counts.inProgress || 0,
       overdueTasks: overdueCount,
+      quickCaptureTasks: quickCaptureCount || 0,
       highPriorityTasks: counts.highPriority || 0,
       mediumPriorityTasks: counts.mediumPriority || 0,
       lowPriorityTasks: counts.lowPriority || 0,

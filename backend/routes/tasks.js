@@ -7,6 +7,10 @@ import { updateStatsAfterTaskChange } from '../middleware/statsUpdater.js';
 
 const router = express.Router();
 
+// Import quick routes
+import quickTasksRouter from './tasks/quick.js';
+router.use('/quick', quickTasksRouter);
+
 // Input validation rules
 const createTaskValidation = [
   body('title')
@@ -22,8 +26,8 @@ const createTaskValidation = [
     .withMessage('Description cannot be more than 500 characters'),
   body('status')
     .optional()
-    .isIn(['pending', 'in-progress', 'completed'])
-    .withMessage('Status must be pending, in-progress, or completed'),
+    .isIn(['draft', 'pending', 'in-progress', 'completed'])
+    .withMessage('Status must be draft, pending, in-progress, or completed'),
   body('priority')
     .optional()
     .isIn(['low', 'medium', 'high'])
@@ -57,6 +61,14 @@ const createTaskValidation = [
     .withMessage('Group is required')
     .isMongoId()
     .withMessage('Group must be a valid ID'),
+  body('isQuickCapture')
+    .optional()
+    .isBoolean()
+    .withMessage('isQuickCapture must be a boolean'),
+  body('assignedTo')
+    .optional()
+    .isMongoId()
+    .withMessage('AssignedTo must be a valid user ID'),
   body('recurrence.pattern')
     .optional()
     .isIn(['none', 'daily', 'weekly', 'monthly', 'yearly'])
@@ -88,8 +100,8 @@ const updateTaskValidation = [
     .withMessage('Description cannot be more than 500 characters'),
   body('status')
     .optional()
-    .isIn(['pending', 'in-progress', 'completed'])
-    .withMessage('Status must be pending, in-progress, or completed'),
+    .isIn(['draft', 'pending', 'in-progress', 'completed'])
+    .withMessage('Status must be draft, pending, in-progress, or completed'),
   body('priority')
     .optional()
     .isIn(['low', 'medium', 'high'])
@@ -122,6 +134,14 @@ const updateTaskValidation = [
     .optional()
     .isMongoId()
     .withMessage('Group must be a valid ID'),
+  body('isQuickCapture')
+    .optional()
+    .isBoolean()
+    .withMessage('isQuickCapture must be a boolean'),
+  body('assignedTo')
+    .optional()
+    .isMongoId()
+    .withMessage('AssignedTo must be a valid user ID'),
   body('recurrence.pattern')
     .optional()
     .isIn(['none', 'daily', 'weekly', 'monthly', 'yearly'])
@@ -155,7 +175,7 @@ const handleValidationErrors = (req, res) => {
 
 // ========================= ROUTES =========================
 
-// @desc    Create new task
+// @desc    Create new task (full task - auto-transitions to pending)
 // @route   POST /api/tasks
 // @access  Private
 router.post(
@@ -189,10 +209,38 @@ router.post(
         });
       }
 
-      const taskData = { ...req.body, user: req.user.id };
+      // Determine if this should be a full task or quick capture
+      const isQuickCapture = req.body.isQuickCapture === true;
+      
+      // Auto-transition logic: full tasks with sufficient details start as pending
+      let status = req.body.status || 'draft';
+      if (!isQuickCapture && !req.body.status) {
+        const hasSubstantialContent = 
+          req.body.description ||
+          req.body.priority ||
+          req.body.dueDate ||
+          req.body.dueAt ||
+          (req.body.tags && req.body.tags.length > 0);
+        
+        if (hasSubstantialContent) {
+          status = 'pending';
+        }
+      }
+
+      const taskData = { 
+        ...req.body, 
+        user: req.user.id,
+        createdBy: req.user.id,
+        status,
+        isQuickCapture: isQuickCapture || false
+      };
 
       const task = await Task.create(taskData);
-      await task.populate('group', 'name color');
+      await task.populate([
+        { path: 'group', select: 'name color icon' },
+        { path: 'createdBy', select: 'name email' },
+        { path: 'assignedTo', select: 'name email' }
+      ]);
 
       res.status(201).json({
         success: true,
@@ -228,7 +276,7 @@ router.post(
   }
 );
 
-// @desc    Update task
+// @desc    Update task (auto-transitions draft → pending when details added)
 // @route   PUT /api/tasks/:id
 // @access  Private
 router.put(
@@ -240,6 +288,19 @@ router.put(
     try {
       const validationError = handleValidationErrors(req, res);
       if (validationError) return validationError;
+
+      // Find the existing task first
+      const task = await Task.findOne({
+        _id: req.params.id,
+        user: req.user.id
+      });
+
+      if (!task) {
+        return res.status(404).json({
+          success: false,
+          message: 'Task not found'
+        });
+      }
 
       if (req.body.group) {
         const group = await Group.findOne({
@@ -255,18 +316,32 @@ router.put(
         }
       }
 
+      const updates = { ...req.body };
+
+      // Auto-transition logic: if task is draft and receiving substantial updates
+      if (task.status === 'draft' && updates.status !== 'draft') {
+        const hasSubstantialUpdates = 
+          updates.description !== undefined ||
+          updates.priority !== undefined ||
+          updates.dueDate !== undefined ||
+          updates.dueAt !== undefined ||
+          updates.tags !== undefined ||
+          updates.assignedTo !== undefined;
+        
+        if (hasSubstantialUpdates && !updates.status) {
+          updates.status = 'pending';
+        }
+      }
+
       const updatedTask = await Task.findOneAndUpdate(
         { _id: req.params.id, user: req.user.id },
-        req.body,
+        updates,
         { new: true, runValidators: true }
-      ).populate('group', 'name color');
-
-      if (!updatedTask) {
-        return res.status(404).json({
-          success: false,
-          message: 'Task not found'
-        });
-      }
+      ).populate([
+        { path: 'group', select: 'name color icon' },
+        { path: 'createdBy', select: 'name email' },
+        { path: 'assignedTo', select: 'name email' }
+      ]);
 
       res.json({
         success: true,
@@ -396,10 +471,18 @@ router.get('/', protect, [
     .optional()
     .isBoolean()
     .withMessage('includeCompleted must be a boolean'),
+  query('includeDrafts')
+    .optional()
+    .isBoolean()
+    .withMessage('includeDrafts must be a boolean'),
+  query('quickCapture')
+    .optional()
+    .isBoolean()
+    .withMessage('quickCapture must be a boolean'),
   query('status')
     .optional()
-    .isIn(['pending', 'in-progress', 'completed', 'all'])
-    .withMessage('Status must be pending, in-progress, completed, or all')
+    .isIn(['draft', 'pending', 'in-progress', 'completed', 'all'])
+    .withMessage('Status must be draft, pending, in-progress, completed, or all')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -417,6 +500,8 @@ router.get('/', protect, [
       group, 
       search,
       includeCompleted = false,
+      includeDrafts = false,
+      quickCapture,
       page = 1, 
       limit = 50, 
       sortBy = 'createdAt', 
@@ -426,16 +511,27 @@ router.get('/', protect, [
     // Build filter object
     const filter = { user: req.user.id };
     
-    // Handle status filtering
+    // Handle status filtering with draft logic
     if (status && status !== 'all') {
       filter.status = status;
-    } else if (!includeCompleted) {
-      // Default: exclude completed tasks unless explicitly included
-      filter.status = { $ne: 'completed' };
+    } else {
+      // Build exclusion array
+      const excludeStatuses = [];
+      if (!includeCompleted) excludeStatuses.push('completed');
+      if (!includeDrafts) excludeStatuses.push('draft');
+      
+      if (excludeStatuses.length > 0) {
+        filter.status = { $nin: excludeStatuses };
+      }
     }
     
     if (priority) filter.priority = priority;
     if (group) filter.group = group;
+    
+    // Filter by quick capture if provided
+    if (quickCapture !== undefined) {
+      filter.isQuickCapture = quickCapture === 'true';
+    }
     
     // Search in title or description
     if (search) {
@@ -459,7 +555,11 @@ router.get('/', protect, [
     
     // Execute query with pagination
     const tasks = await Task.find(filter)
-      .populate('group', 'name color icon')
+      .populate([
+        { path: 'group', select: 'name color icon' },
+        { path: 'createdBy', select: 'name email' },
+        { path: 'assignedTo', select: 'name email' }
+      ])
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -495,7 +595,11 @@ router.get('/:id', protect, async (req, res) => {
     const task = await Task.findOne({
       _id: req.params.id,
       user: req.user.id
-    }).populate('group', 'name color icon');
+    }).populate([
+      { path: 'group', select: 'name color icon' },
+      { path: 'createdBy', select: 'name email' },
+      { path: 'assignedTo', select: 'name email' }
+    ]);
     
     if (!task) {
       return res.status(404).json({

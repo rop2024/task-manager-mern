@@ -19,7 +19,7 @@ import './models/InboxItem.js'; // NEW: Import InboxItem model
 
 // Import routes
 import authRoutes from './routes/auth.js';
-import taskRoutes from './routes/tasks.js';
+import taskRoutes from './routes/tasks.js'; // This includes both regular and quick routes
 import groupRoutes from './routes/groups.js';
 import statsRoutes from './routes/stats.js';
 import calendarRoutes from './routes/calendar.js';
@@ -77,9 +77,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/phase1-db
 .then(() => console.log('✅ MongoDB Atlas connected successfully'))
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Routes
+// Mount routes
 app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes); 
+app.use('/api/tasks', taskRoutes); // This now includes both regular and quick routes
 app.use('/api/groups', groupRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);

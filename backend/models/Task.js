@@ -11,17 +11,21 @@ const taskSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Task title is required'],
     trim: true,
-    maxlength: [200, 'Title cannot be more than 200 characters']
+    maxlength: [100, 'Title cannot be more than 100 characters']
   },
   description: {
     type: String,
     trim: true,
-    maxlength: [5000, 'Description cannot be more than 5000 characters']
+    maxlength: [500, 'Description cannot be more than 500 characters']
   },
   status: {
     type: String,
-    enum: ['pending', 'in-progress', 'completed'],
-    default: 'pending'
+    enum: ['draft', 'pending', 'in-progress', 'completed'],
+    default: 'draft'
+  },
+  isQuickCapture: {
+    type: Boolean,
+    default: false
   },
   priority: {
     type: String,
@@ -60,6 +64,16 @@ const taskSchema = new mongoose.Schema({
   inboxRef: {
     type: mongoose.Schema.ObjectId,
     ref: 'InboxItem'
+  },
+  // NEW: Reference fields for user assignments
+  assignedTo: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
+  },
+  createdBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true
   },
   tags: [{
     type: String,
@@ -106,14 +120,17 @@ taskSchema.index({ user: 1, status: 1, dueAt: 1 });
 // Index for completed tasks queries
 taskSchema.index({ user: 1, status: 1, completedAt: -1 });
 taskSchema.index({ user: 1, completedAt: -1 });
+// Index for better query performance with new fields
+taskSchema.index({ status: 1, createdBy: 1 });
+taskSchema.index({ isQuickCapture: 1, createdAt: 1 });
 
-// Virtual getters using ES6 syntax
-taskSchema.virtual('isOverdue').get(() => {
+// Virtual getters - using regular functions to maintain 'this' context
+taskSchema.virtual('isOverdue').get(function() {
   if (!this.dueAt || this.status === 'completed') return false;
   return this.dueAt < new Date();
 });
 
-taskSchema.virtual('daysUntilDue').get(() => {
+taskSchema.virtual('daysUntilDue').get(function() {
   if (!this.dueAt) return null;
   const now = new Date();
   const due = new Date(this.dueAt);
@@ -121,7 +138,7 @@ taskSchema.virtual('daysUntilDue').get(() => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 });
 
-taskSchema.virtual('daysSinceCompletion').get(() => {
+taskSchema.virtual('daysSinceCompletion').get(function() {
   if (!this.completedAt) return null;
   const now = new Date();
   const completed = new Date(this.completedAt);
@@ -162,6 +179,17 @@ Object.assign(taskSchema.methods, {
 
 // Pre-save middleware using ES6 syntax
 taskSchema.pre('save', async function(next) {
+  // Middleware to ensure backward compatibility
+  // If status is not set (existing documents), set to 'draft'
+  if (!this.status) {
+    this.status = 'draft';
+  }
+  
+  // Ensure isQuickCapture has a default value
+  if (this.isQuickCapture === undefined || this.isQuickCapture === null) {
+    this.isQuickCapture = false;
+  }
+
   // Set completedAt when task is marked completed
   if (this.isModified('status')) {
     if (this.status === 'completed' && !this.completedAt) {
@@ -583,6 +611,32 @@ Object.assign(taskSchema.statics, {
         }
       }
     }).populate('group', 'name color');
+  },
+
+  // Static method for backward compatibility helper
+  async migrateExistingTasks() {
+    try {
+      const result = await this.updateMany(
+        { 
+          $or: [
+            { status: { $exists: false } },
+            { status: null }
+          ]
+        },
+        { 
+          $set: { 
+            status: 'draft',
+            isQuickCapture: false
+          } 
+        }
+      );
+      
+      console.log(`Migrated ${result.modifiedCount} existing tasks to include new fields`);
+      return result;
+    } catch (error) {
+      console.error('Migration error:', error);
+      throw error;
+    }
   }
 });
 

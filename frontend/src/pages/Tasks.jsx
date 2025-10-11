@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { TaskProvider } from '../context/TaskContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from '../components/layout/Sidebar';
 import TaskForm from '../components/tasks/TaskForm';
+import TaskList from '../components/tasks/TaskList';
 import TaskItem from '../components/tasks/TaskItem';
 import TaskStats from '../components/tasks/TaskStats';
 import GroupForm from '../components/group/GroupForm';
 import CompletedTasksPanel from '../components/tasks/CompletedTasksPanel';
 
-const Tasks = () => {
+const TasksPage = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -34,6 +36,7 @@ const Tasks = () => {
     priority: '',
     search: ''
   });
+  const [taskFormErrors, setTaskFormErrors] = useState({});
 
   // Fetch groups
   const fetchGroups = async () => {
@@ -148,6 +151,7 @@ const Tasks = () => {
 
   const handleCreateTask = async (taskData) => {
     try {
+      setTaskFormErrors({}); // Clear previous errors
       const response = await axios.post('/api/tasks', {
         ...taskData,
         group: selectedGroup._id
@@ -158,12 +162,31 @@ const Tasks = () => {
       return response.data.data;
     } catch (error) {
       console.error('Error creating task:', error);
+      
+      // Handle validation errors from backend
+      if (error.response?.data?.errors) {
+        const backendErrors = {};
+        error.response.data.errors.forEach(err => {
+          if (err.param) {
+            backendErrors[err.param] = err.msg;
+          } else if (err.field) {
+            backendErrors[err.field] = err.message;
+          }
+        });
+        setTaskFormErrors(backendErrors);
+      } else if (error.response?.data?.message) {
+        setTaskFormErrors({ general: error.response.data.message });
+      } else {
+        setTaskFormErrors({ general: 'An error occurred while creating the task' });
+      }
+      
       throw error;
     }
   };
 
   const handleUpdateTask = async (taskId, taskData) => {
     try {
+      setTaskFormErrors({}); // Clear previous errors
       const response = await axios.put(`/api/tasks/${taskId}`, taskData);
       setTasks(prev => prev.map(task => 
         task._id === taskId ? response.data.data : task
@@ -172,6 +195,24 @@ const Tasks = () => {
       return response.data.data;
     } catch (error) {
       console.error('Error updating task:', error);
+      
+      // Handle validation errors from backend
+      if (error.response?.data?.errors) {
+        const backendErrors = {};
+        error.response.data.errors.forEach(err => {
+          if (err.param) {
+            backendErrors[err.param] = err.msg;
+          } else if (err.field) {
+            backendErrors[err.field] = err.message;
+          }
+        });
+        setTaskFormErrors(backendErrors);
+      } else if (error.response?.data?.message) {
+        setTaskFormErrors({ general: error.response.data.message });
+      } else {
+        setTaskFormErrors({ general: 'An error occurred while updating the task' });
+      }
+      
       throw error;
     }
   };
@@ -232,277 +273,241 @@ const Tasks = () => {
   const activeCount = tasks.length - completedCount;
 
   return (
-    <div className={`flex min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Sidebar */}
-      {sidebarVisible && (
-        <Sidebar
-          groups={groups}
-          onGroupCreate={handleCreateGroup}
-          onGroupEdit={setEditingGroup}
-          selectedGroup={selectedGroup}
-          onGroupSelect={setSelectedGroup}
-          onGroupDeleted={fetchGroups}
-        />
-      )}
+    <TaskProvider>
+      <div className={`flex min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        {/* Sidebar */}
+        {sidebarVisible && (
+          <Sidebar
+            groups={groups}
+            onGroupCreate={handleCreateGroup}
+            onGroupEdit={setEditingGroup}
+            selectedGroup={selectedGroup}
+            onGroupSelect={setSelectedGroup}
+            onGroupDeleted={fetchGroups}
+          />
+        )}
 
-      {/* Fixed Sidebar Toggle (visible only when sidebar is hidden) */}
-      {!sidebarVisible && (
-        <button
-          onClick={() => {
-            setSidebarVisible(true);
-            localStorage.setItem('sidebarVisible', 'true');
-          }}
-          className={`fixed left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-r-lg shadow-md transition-colors z-20
-            ${isDark ? 'bg-blue-800 text-blue-100 hover:bg-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-          title="Show Sidebar"
-          aria-label="Show Sidebar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
-      )}
+        {/* Fixed Sidebar Toggle (visible only when sidebar is hidden) */}
+        {!sidebarVisible && (
+          <button
+            onClick={() => {
+              setSidebarVisible(true);
+              localStorage.setItem('sidebarVisible', 'true');
+            }}
+            className={`fixed left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-r-lg shadow-md transition-colors z-20
+              ${isDark ? 'bg-blue-800 text-blue-100 hover:bg-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+            title="Show Sidebar"
+            aria-label="Show Sidebar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        )}
 
-      {/* Main Content */}
-      <div className={`flex-1 ${sidebarVisible ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
-        <div className="py-8 px-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                {/* Sidebar Toggle Button */}
-                <button 
-                  onClick={() => {
-                    const newValue = !sidebarVisible;
-                    setSidebarVisible(newValue);
-                    localStorage.setItem('sidebarVisible', JSON.stringify(newValue));
-                  }}
-                  className={`mr-4 p-2 rounded-lg transition-colors flex items-center justify-center
-                    ${isDark 
-                      ? sidebarVisible 
-                        ? 'bg-blue-900 text-blue-300 border border-blue-800' 
-                        : 'border border-gray-700 text-gray-300 hover:bg-gray-800' 
-                      : sidebarVisible 
-                        ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  aria-label={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-                  title={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className={`h-5 w-5 transition-transform duration-300 ${sidebarVisible ? 'rotate-0' : 'rotate-180'}`} 
-                    viewBox="0 0 20 20" 
-                    fill="currentColor"
+        {/* Main Content */}
+        <div className={`flex-1 ${sidebarVisible ? 'ml-64' : 'ml-0'} transition-all duration-300`}>
+          <div className="py-8 px-8">
+            {/* Header */}
+            <header className="mb-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  {/* Sidebar Toggle Button */}
+                  <button 
+                    onClick={() => {
+                      const newValue = !sidebarVisible;
+                      setSidebarVisible(newValue);
+                      localStorage.setItem('sidebarVisible', JSON.stringify(newValue));
+                    }}
+                    className={`mr-4 p-2 rounded-lg transition-colors flex items-center justify-center
+                      ${isDark 
+                        ? sidebarVisible 
+                          ? 'bg-blue-900 text-blue-300 border border-blue-800' 
+                          : 'border border-gray-700 text-gray-300 hover:bg-gray-800' 
+                        : sidebarVisible 
+                          ? 'bg-blue-50 text-blue-600 border border-blue-200' 
+                          : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    aria-label={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+                    title={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
                   >
-                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                </button>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-5 w-5 transition-transform duration-300 ${sidebarVisible ? 'rotate-0' : 'rotate-180'}`} 
+                      viewBox="0 0 20 20" 
+                      fill="currentColor"
+                    >
+                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  <div>
+                    <h1 className={`text-4xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedGroup ? (
+                        <div className="flex items-center">
+                          <span 
+                            className="mr-3 text-3xl"
+                            style={{ color: selectedGroup.color }}
+                          >
+                            {selectedGroup.icon}
+                          </span>
+                          My Tasks
+                        </div>
+                      ) : 'My Tasks'}
+                    </h1>
+                    <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {selectedGroup 
+                        ? `Quickly capture ideas and manage your ${selectedGroup.name} tasks`
+                        : 'Quickly capture ideas and manage your tasks'
+                      }
+                    </p>
+                  </div>
+                </div>
                 
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    {selectedGroup ? (
-                      <div className="flex items-center">
-                        <span 
-                          className="mr-3 text-2xl"
-                          style={{ color: selectedGroup.color }}
-                        >
-                          {selectedGroup.icon}
-                        </span>
-                        {selectedGroup.name}
-                      </div>
-                    ) : 'All Tasks'}
-                  </h1>
-                  <p className="text-gray-600 mt-2">
-                    {selectedGroup?.description || 'Manage all your tasks across all groups'}
-                    {selectedGroup && ` (${activeCount} active, ${completedCount} completed)`}
-                  </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => navigate('/calendar')}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Calendar
+                  </button>
+                  <button
+                    onClick={() => navigate('/inbox')}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    Inbox
+                  </button>
                 </div>
               </div>
               
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => navigate('/')}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  Home
-                </button>
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => navigate('/calendar')}
-                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Calendar
-                </button>
-                <button
-                  onClick={() => setShowCompletedPanel(true)}
-                  className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Completed ({completedCount})
-                </button>
-                <button
-                  onClick={() => setShowTaskForm(true)}
-                  disabled={!selectedGroup}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add Task
-                </button>
-              </div>
-            </div>
-            
-            {!selectedGroup && (
-              <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-yellow-800">
-                  Select a group from the sidebar to start adding tasks.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <TaskStats stats={stats} loading={loading} />
-
-          {/* Filters and Actions */}
-          {selectedGroup && (
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                  <input
-                    type="text"
-                    placeholder="Search tasks..."
-                    value={filters.search}
-                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  
-                  <select
-                    value={filters.status}
-                    onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="in-progress">In Progress</option>
-                    {showCompletedTasks && <option value="completed">Completed</option>}
-                  </select>
-
-                  <select
-                    value={filters.priority}
-                    onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Priority</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-
-                  {/* Show Completed Toggle */}
+              {!selectedGroup && (
+                <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
                   <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="showCompleted"
-                      checked={showCompletedTasks}
-                      onChange={(e) => setShowCompletedTasks(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="showCompleted" className="ml-2 block text-sm text-gray-700">
-                      Show Completed
-                    </label>
+                    <svg className="w-5 h-5 text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <p className="text-yellow-800">
+                      Select a group from the sidebar to start adding and managing tasks.
+                    </p>
                   </div>
                 </div>
+              )}
+            </header>
+
+            {/* Stats */}
+            <TaskStats stats={stats} loading={loading} />
+
+            {/* Main Content Area */}
+            <main className="space-y-6">
+              {selectedGroup ? (
+                <TaskList 
+                  onTaskEdit={setEditingTask}
+                  onTaskRefresh={() => {
+                    fetchTasks();
+                    fetchStats();
+                    fetchGroups();
+                  }}
+                />
+              ) : (
+                <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center ${isDark ? 'bg-gray-800' : ''}`}>
+                  <div className="text-6xl mb-4">📋</div>
+                  <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                    No Group Selected
+                  </h3>
+                  <p className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Choose a group from the sidebar to view and manage your tasks
+                  </p>
+                  <button
+                    onClick={() => setSidebarVisible(true)}
+                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Open Sidebar
+                  </button>
+                </div>
+              )}
+            </main>
+          </div>
+        </div>
+
+        {/* Completed Tasks Panel */}
+        <CompletedTasksPanel
+          isOpen={showCompletedPanel}
+          onClose={() => setShowCompletedPanel(false)}
+          groupId={selectedGroup?._id}
+        />
+
+        {/* Enhanced Edit Task Modal */}
+        {editingTask && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800">
+                  {editingTask.status === 'draft' 
+                    ? 'Complete Draft Task' 
+                    : 'Edit Task'
+                  }
+                </h2>
+                <button 
+                  onClick={() => setEditingTask(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Close modal"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Modal Content */}
+              <div className="p-6">
+                <TaskForm
+                  task={editingTask}
+                  onSave={(updatedTask) => {
+                    setEditingTask(null);
+                    fetchTasks();
+                    fetchStats();
+                    fetchGroups();
+                    console.log('Task updated:', updatedTask);
+                  }}
+                  onCancel={() => setEditingTask(null)}
+                  groups={groups}
+                  selectedGroupId={selectedGroup?._id}
+                />
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ... existing modals and task grid ... */}
-
-          {/* Task Items */}
-          {filteredTasks.map(task => (
-            <TaskItem
-              key={task._id}
-              task={task}
-              onEdit={setEditingTask}
-              onDelete={handleDeleteTask}
-              onStatusChange={handleStatusChange}
-              onMoveTask={handleMoveTask}
-              onToggleComplete={handleToggleComplete}
-              groups={groups}
+        {/* Edit Group Modal */}
+        {editingGroup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <GroupForm
+              group={editingGroup}
+              onSubmit={(data) => handleUpdateGroup(editingGroup._id, data)}
+              onCancel={() => setEditingGroup(null)}
+              loading={loading}
             />
-          ))}
-
-        </div>
+          </div>
+        )}
       </div>
-
-      {/* Completed Tasks Panel */}
-      <CompletedTasksPanel
-        isOpen={showCompletedPanel}
-        onClose={() => setShowCompletedPanel(false)}
-        groupId={selectedGroup?._id}
-      />
-
-      {/* Task Form Modal */}
-      {showTaskForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <TaskForm
-            onSubmit={handleCreateTask}
-            onCancel={() => setShowTaskForm(false)}
-            loading={loading}
-            groups={groups}
-            selectedGroupId={selectedGroup?._id}
-          />
-        </div>
-      )}
-
-      {/* Edit Task Modal */}
-      {editingTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <TaskForm
-            task={editingTask}
-            onSubmit={(updatedData) => {
-              handleUpdateTask(editingTask._id, updatedData);
-              setEditingTask(null);
-            }}
-            onCancel={() => setEditingTask(null)}
-            loading={loading}
-            groups={groups}
-          />
-        </div>
-      )}
-
-      {/* Edit Group Modal */}
-      {editingGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <GroupForm
-            group={editingGroup}
-            onSubmit={(data) => handleUpdateGroup(editingGroup._id, data)}
-            onCancel={() => setEditingGroup(null)}
-            loading={loading}
-          />
-        </div>
-      )}
-    </div>
+    </TaskProvider>
   );
 };
 
-export default Tasks;
+export default TasksPage;
