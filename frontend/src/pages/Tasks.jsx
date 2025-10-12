@@ -5,13 +5,14 @@ import { TaskProvider } from '../context/TaskContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from '../components/layout/Sidebar';
-import InboxSidebar from '../components/inbox/InboxSidebar';
 import TaskForm from '../components/tasks/TaskForm';
 import TaskList from '../components/tasks/TaskList';
 import TaskItem from '../components/tasks/TaskItem';
 import TaskStats from '../components/tasks/TaskStats';
 import GroupForm from '../components/group/GroupForm';
 import CompletedTasksPanel from '../components/tasks/CompletedTasksPanel';
+import FloatingAddButton from '../components/ui/FloatingAddButton';
+import DraftsList from '../components/tasks/DraftsList';
 
 const TasksPage = () => {
   const { user } = useAuth();
@@ -23,24 +24,19 @@ const TasksPage = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [stats, setStats] = useState({ total: 0, pending: 0, 'in-progress': 0, completed: 0 });
   const [loading, setLoading] = useState(true);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [editingTask, setEditingTask] = useState(null);
   const [editingGroup, setEditingGroup] = useState(null);
   const [showCompletedPanel, setShowCompletedPanel] = useState(false);
-  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(() => {
     const saved = localStorage.getItem('sidebarVisible');
     return saved !== null ? JSON.parse(saved) : true;
   });
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState('tasks'); // 'tasks' or 'inbox'
+  const [activeTab, setActiveTab] = useState('active'); // 'active', 'completed', 'drafts'
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
     search: ''
   });
-  const [taskFormErrors, setTaskFormErrors] = useState({});
-  const [formSubmissionKey, setFormSubmissionKey] = useState(0);
+
 
   // Fetch groups
   const fetchGroups = async () => {
@@ -67,7 +63,8 @@ const TasksPage = () => {
       if (filters.status) params.append('status', filters.status);
       if (filters.priority) params.append('priority', filters.priority);
       if (selectedGroup) params.append('group', selectedGroup._id);
-      params.append('includeCompleted', showCompletedTasks.toString());
+      // Always include completed tasks since we have separate tabs
+      params.append('includeCompleted', 'true');
       
       const response = await axios.get(`/api/tasks?${params}`);
       setTasks(response.data.data);
@@ -102,7 +99,7 @@ const TasksPage = () => {
       fetchTasks();
       fetchStats();
     }
-  }, [selectedGroup, filters.status, filters.priority, groups.length, showCompletedTasks]);
+  }, [selectedGroup, filters.status, filters.priority, groups.length]);
 
   // Toggle task completion
   const handleToggleComplete = async (taskId) => {
@@ -189,18 +186,7 @@ const TasksPage = () => {
     }
   };
 
-  // Handle new task creation
-  const handleTaskCreated = (newTask) => {
-    setTasks(prev => [newTask, ...prev]);
-    setShowTaskForm(false);
-    // Refresh form for next creation
-    setFormSubmissionKey(prev => prev + 1);
-  };
 
-  // Handle task form cancellation
-  const handleCancelTask = () => {
-    setShowTaskForm(false);
-  };
 
   const handleUpdateTask = async (taskId, taskData) => {
     try {
@@ -294,40 +280,20 @@ const TasksPage = () => {
     <TaskProvider>
       <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {/* Sidebar */}
-        {sidebarVisible && !sidebarCollapsed && (
-          <div className={`
-            transition-all duration-300 ease-in-out border-r border-gray-200
-            ${activeView === 'tasks' ? 'w-64' : 'w-80'}
-          `}>
-            {activeView === 'tasks' ? (
-              <Sidebar
-                groups={groups}
-                onGroupCreate={handleCreateGroup}
-                onGroupEdit={setEditingGroup}
-                selectedGroup={selectedGroup}
-                onGroupSelect={setSelectedGroup}
-                onGroupDeleted={fetchGroups}
-              />
-            ) : (
-              <InboxSidebar />
-            )}
+        {sidebarVisible && (
+          <div className="w-64 transition-all duration-300 ease-in-out border-r border-gray-200">
+            <Sidebar
+              groups={groups}
+              onGroupCreate={handleCreateGroup}
+              onGroupEdit={setEditingGroup}
+              selectedGroup={selectedGroup}
+              onGroupSelect={setSelectedGroup}
+              onGroupDeleted={fetchGroups}
+            />
           </div>
         )}
 
-        {/* Collapse/Expand Button */}
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className={`
-            fixed z-20 bg-white border border-gray-300 rounded-lg p-2 shadow-sm 
-            hover:shadow-md transition-all duration-200 hover:bg-gray-50
-            ${sidebarCollapsed || !sidebarVisible ? 'top-4 left-4' : `top-4 ${activeView === 'tasks' ? 'left-60' : 'left-76'}`}
-          `}
-          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <div className={`transform transition-transform ${sidebarCollapsed ? 'rotate-0' : 'rotate-180'}`}>
-            ←
-          </div>
-        </button>
+
 
         {/* Fixed Sidebar Toggle (visible only when sidebar is hidden) */}
         {!sidebarVisible && (
@@ -384,53 +350,20 @@ const TasksPage = () => {
                 
                 <div>
                   <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    {activeView === 'inbox' ? 'Inbox' : 'Tasks'}
+                    Tasks
                   </h1>
                   <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
-                    {activeView === 'inbox'
-                      ? 'Capture and organize your ideas before turning them into tasks'
-                      : 'Manage your tasks and refer to inbox items for ideas'
-                    }
+                    Manage your tasks and track your productivity
                   </p>
                 </div>
               </div>
                 
                 <div className="flex items-center space-x-3">
-                  {/* View Toggle Buttons */}
-                  <div className={`flex ${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-1 mr-4`}>
+                  {selectedGroup && (
                     <button
-                      onClick={() => setActiveView('tasks')}
-                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                        activeView === 'tasks'
-                          ? isDark 
-                            ? 'bg-gray-600 text-blue-300 shadow-sm'
-                            : 'bg-white text-blue-600 shadow-sm'
-                          : isDark
-                            ? 'text-gray-300 hover:text-white'
-                            : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Tasks
-                    </button>
-                    <button
-                      onClick={() => setActiveView('inbox')}
-                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                        activeView === 'inbox'
-                          ? isDark 
-                            ? 'bg-gray-600 text-blue-300 shadow-sm'
-                            : 'bg-white text-blue-600 shadow-sm'
-                          : isDark
-                            ? 'text-gray-300 hover:text-white'
-                            : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Inbox
-                    </button>
-                  </div>
-
-                  {activeView === 'tasks' && selectedGroup && (
-                    <button
-                      onClick={() => setShowTaskForm(true)}
+                      onClick={() => navigate('/tasks/new', { 
+                        state: { selectedGroupId: selectedGroup._id } 
+                      })}
                       className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium 
                                hover:bg-blue-700 transition-colors duration-200 
                                flex items-center space-x-2"
@@ -441,77 +374,134 @@ const TasksPage = () => {
                 </div>
               </div>
             </header>
-              
-            {/* Task Creation Hint Banner */}
-            {!sidebarCollapsed && sidebarVisible && activeView === 'inbox' && (
-              <div className={`flex-shrink-0 ${isDark ? 'bg-blue-900' : 'bg-blue-50'} border-b ${isDark ? 'border-blue-800' : 'border-blue-200'} px-6 py-3`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`${isDark ? 'bg-blue-800' : 'bg-blue-100'} p-1 rounded`}>
-                      <svg className={`h-4 w-4 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <p className={`text-sm ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
-                      <strong>Pro Tip:</strong> Refer to your inbox list for quick ideas → delete when done.
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => setSidebarCollapsed(true)}
-                    className={`${isDark ? 'text-blue-300 hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'} text-sm font-medium`}
+
+            {/* Tab Navigation */}
+            {selectedGroup && (
+              <nav className={`flex-shrink-0 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6`}>
+                <div className="flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('active')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'active'
+                        ? isDark
+                          ? 'border-blue-400 text-blue-300'
+                          : 'border-blue-500 text-blue-600'
+                        : isDark
+                          ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                   >
-                    Hide sidebar
+                    Active Tasks
+                    {activeCount > 0 && (
+                      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                        activeTab === 'active'
+                          ? isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
+                          : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {activeCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('completed')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'completed'
+                        ? isDark
+                          ? 'border-green-400 text-green-300'
+                          : 'border-green-500 text-green-600'
+                        : isDark
+                          ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Completed
+                    {completedCount > 0 && (
+                      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                        activeTab === 'completed'
+                          ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-600'
+                          : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {completedCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('drafts')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'drafts'
+                        ? isDark
+                          ? 'border-purple-400 text-purple-300'
+                          : 'border-purple-500 text-purple-600'
+                        : isDark
+                          ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Drafts
+                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                      activeTab === 'drafts'
+                        ? isDark ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-600'
+                        : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      New
+                    </span>
                   </button>
                 </div>
-              </div>
+              </nav>
             )}
 
             {/* Content Area */}
             <div className="flex-1 flex">
               {/* Task Form & List */}
               <div className="flex-1 flex flex-col">
-                {showTaskForm ? (
-                  <div className={`flex-1 ${isDark ? 'bg-gray-800' : 'bg-white'} border-r ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <div className="max-w-2xl mx-auto p-6">
-                      <div className="mb-6">
-                        <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Create New Task</h2>
-                        <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
-                          Add a new task to your list. Don't forget to check your inbox for inspiration!
-                        </p>
-                      </div>
-                      
-                      <TaskForm 
-                        key={formSubmissionKey}
-                        onTaskCreated={handleTaskCreated}
-                        onCancel={handleCancelTask}
-                        groups={groups}
-                        selectedGroupId={selectedGroup?._id}
-                      />
-                    </div>
-                  </div>
-                ) : activeView === 'inbox' ? (
-                  <div className={`flex-1 ${isDark ? 'bg-gray-800' : 'bg-white'} p-12 text-center`}>
-                    <div className="text-6xl mb-4">📥</div>
-                    <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                      Inbox View
-                    </h3>
-                    <p className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                      Inbox functionality will be integrated here. Use the sidebar to manage your inbox items.
-                    </p>
-                  </div>
-                ) : selectedGroup ? (
+                {selectedGroup ? (
                   <div className="flex-1">
-                    <TaskStats stats={stats} loading={loading} />
-                    <TaskList
-                      tasks={tasks}
-                      onTasksChange={setTasks}
-                      onTaskEdit={setEditingTask}
-                      onTaskRefresh={() => {
-                        fetchTasks();
-                        fetchStats();
-                        fetchGroups();
-                      }}
-                    />
+                    {/* Stats - show for active and completed tabs */}
+                    {(activeTab === 'active' || activeTab === 'completed') && (
+                      <TaskStats stats={stats} loading={loading} />
+                    )}
+                    
+                    {/* Active Tasks */}
+                    {activeTab === 'active' && (
+                      <TaskList
+                        tasks={tasks.filter(task => task.status !== 'completed')}
+                        onTasksChange={setTasks}
+                        onTaskEdit={(task) => navigate(`/tasks/edit/${task._id}`)}
+                        onTaskRefresh={() => {
+                          fetchTasks();
+                          fetchStats();
+                          fetchGroups();
+                        }}
+                      />
+                    )}
+
+                    {/* Completed Tasks */}
+                    {activeTab === 'completed' && (
+                      <TaskList
+                        tasks={tasks.filter(task => task.status === 'completed')}
+                        onTasksChange={setTasks}
+                        onTaskEdit={(task) => navigate(`/tasks/edit/${task._id}`)}
+                        onTaskRefresh={() => {
+                          fetchTasks();
+                          fetchStats();
+                          fetchGroups();
+                        }}
+                        showCompleted={true}
+                      />
+                    )}
+
+                    {/* Drafts */}
+                    {activeTab === 'drafts' && (
+                      <DraftsList
+                        onDraftPromoted={() => {
+                          fetchTasks();
+                          fetchStats();
+                          fetchGroups();
+                        }}
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className={`flex-1 ${isDark ? 'bg-gray-800' : 'bg-white'} p-12 text-center`}>
@@ -531,33 +521,6 @@ const TasksPage = () => {
                   </div>
                 )}
               </div>
-
-              {/* Quick Inbox Preview (when sidebar is collapsed) */}
-              {sidebarCollapsed && sidebarVisible && (
-                <div className={`w-64 ${isDark ? 'bg-gray-800' : 'bg-white'} border-l ${isDark ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
-                  <div className={`flex-shrink-0 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} p-4`}>
-                    <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'} text-sm`}>Inbox Preview</h3>
-                    <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Recent items for reference</p>
-                  </div>
-                  
-                  <div className="flex-1 p-4">
-                    <div className="text-center py-8">
-                      <svg className={`h-8 w-8 ${isDark ? 'text-gray-600' : 'text-gray-300'} mx-auto mb-2`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
-                        Inbox sidebar is collapsed
-                      </p>
-                      <button
-                        onClick={() => setSidebarCollapsed(false)}
-                        className={`${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} text-sm font-medium`}
-                      >
-                        Show Inbox →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -568,49 +531,6 @@ const TasksPage = () => {
           onClose={() => setShowCompletedPanel(false)}
           groupId={selectedGroup?._id}
         />
-
-        {/* Enhanced Edit Task Modal */}
-        {editingTask && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
-              {/* Modal Header */}
-              <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                  {editingTask.status === 'draft' 
-                    ? 'Complete Draft Task' 
-                    : 'Edit Task'
-                  }
-                </h2>
-                <button 
-                  onClick={() => setEditingTask(null)}
-                  className={`p-2 ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} rounded-lg transition-colors`}
-                  aria-label="Close modal"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Modal Content */}
-              <div className="p-6">
-                <TaskForm
-                  task={editingTask}
-                  onSave={(updatedTask) => {
-                    setEditingTask(null);
-                    fetchTasks();
-                    fetchStats();
-                    fetchGroups();
-                    console.log('Task updated:', updatedTask);
-                  }}
-                  onCancel={() => setEditingTask(null)}
-                  groups={groups}
-                  selectedGroupId={selectedGroup?._id}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Edit Group Modal */}
         {editingGroup && (
@@ -623,6 +543,9 @@ const TasksPage = () => {
             />
           </div>
         )}
+
+        {/* Floating Add Button */}
+        <FloatingAddButton />
     </TaskProvider>
   );
 };

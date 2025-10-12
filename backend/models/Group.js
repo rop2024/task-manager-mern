@@ -34,6 +34,23 @@ const groupSchema = new mongoose.Schema({
   taskCount: {
     type: Number,
     default: 0
+  },
+  endGoal: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'End goal cannot be more than 500 characters']
+  },
+  isCompleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  completedAt: {
+    type: Date
+  },
+  completedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true
@@ -42,6 +59,7 @@ const groupSchema = new mongoose.Schema({
 // Index for better query performance
 groupSchema.index({ user: 1, createdAt: -1 });
 groupSchema.index({ user: 1, isDefault: 1 });
+groupSchema.index({ user: 1, isCompleted: 1 });
 
 // Update task count when tasks are added/removed
 groupSchema.statics.updateTaskCount = async function(groupId) {
@@ -54,6 +72,43 @@ groupSchema.statics.updateTaskCount = async function(groupId) {
     console.error('Error updating task count:', error);
     return 0;
   }
+};
+
+// Mark group as completed
+groupSchema.statics.markCompleted = async function(groupId, userId) {
+  const group = await this.findOne({ _id: groupId, user: userId });
+  
+  if (!group) {
+    throw new Error('Group not found or access denied');
+  }
+
+  group.isCompleted = true;
+  group.completedAt = new Date();
+  group.completedBy = userId;
+  
+  await group.save();
+  
+  // Optionally, you can add logic here to handle tasks in the group
+  // e.g., mark all tasks as completed, move them, or show a modal
+  
+  return group;
+};
+
+// Unmark group as completed
+groupSchema.statics.unmarkCompleted = async function(groupId, userId) {
+  const group = await this.findOne({ _id: groupId, user: userId });
+  
+  if (!group) {
+    throw new Error('Group not found or access denied');
+  }
+
+  group.isCompleted = false;
+  group.completedAt = undefined;
+  group.completedBy = undefined;
+  
+  await group.save();
+  
+  return group;
 };
 
 // Create default groups for new users

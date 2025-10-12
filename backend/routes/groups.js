@@ -47,7 +47,16 @@ const updateGroupValidation = [
   body('icon')
     .optional()
     .isLength({ max: 5 })
-    .withMessage('Icon must be a single emoji or short text')
+    .withMessage('Icon must be a single emoji or short text'),
+  body('endGoal')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('End goal cannot be more than 500 characters'),
+  body('isCompleted')
+    .optional()
+    .isBoolean()
+    .withMessage('isCompleted must be a boolean')
 ];
 
 // @desc    Get all groups for user
@@ -185,17 +194,34 @@ router.put('/:id', protect, updateGroupValidation, [
       });
     }
 
+    // Handle completion status change using the static method
+    if (req.body.isCompleted !== undefined) {
+      if (req.body.isCompleted && !group.isCompleted) {
+        // Mark as completed
+        group = await Group.markCompleted(req.params.id, req.user.id);
+      } else if (!req.body.isCompleted && group.isCompleted) {
+        // Unmark as completed
+        group = await Group.unmarkCompleted(req.params.id, req.user.id);
+      }
+      
+      // Remove isCompleted from req.body as it's handled by the static methods
+      delete req.body.isCompleted;
+    }
+
     // Prevent updating default groups' core properties
     if (group.isDefault) {
       delete req.body.isDefault;
       delete req.body.user;
     }
 
-    group = await Group.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    // Update other fields if any remain
+    if (Object.keys(req.body).length > 0) {
+      group = await Group.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        { new: true, runValidators: true }
+      );
+    }
 
     res.json({
       success: true,
@@ -311,6 +337,86 @@ router.get('/:id/stats', protect, [
     res.status(500).json({
       success: false,
       message: 'Server error while fetching group statistics'
+    });
+  }
+});
+
+// @desc    Mark group as completed
+// @route   PATCH /api/groups/:id/complete
+// @access  Private
+router.patch('/:id/complete', protect, [
+  param('id').isMongoId().withMessage('Invalid group ID')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const group = await Group.markCompleted(req.params.id, req.user.id);
+
+    res.json({
+      success: true,
+      message: 'Group marked as completed',
+      data: group
+    });
+  } catch (error) {
+    console.error('Mark group complete error:', error);
+    
+    if (error.message === 'Group not found or access denied') {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error while marking group as completed'
+    });
+  }
+});
+
+// @desc    Unmark group as completed
+// @route   PATCH /api/groups/:id/uncomplete
+// @access  Private
+router.patch('/:id/uncomplete', protect, [
+  param('id').isMongoId().withMessage('Invalid group ID')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const group = await Group.unmarkCompleted(req.params.id, req.user.id);
+
+    res.json({
+      success: true,
+      message: 'Group unmarked as completed',
+      data: group
+    });
+  } catch (error) {
+    console.error('Unmark group complete error:', error);
+    
+    if (error.message === 'Group not found or access denied') {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error while unmarking group as completed'
     });
   }
 });

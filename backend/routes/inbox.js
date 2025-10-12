@@ -364,10 +364,10 @@ router.delete('/:id/permanent', async (req, res) => {
   }
 });
 
-// @desc    Promote inbox item to task
-// @route   POST /api/inbox/:id/promote
+// @desc    Promote inbox item to draft
+// @route   POST /api/inbox/:id/promote-to-draft
 // @access  Private
-router.post('/:id/promote', async (req, res) => {
+router.post('/:id/promote-to-draft', async (req, res) => {
   try {
     const { id: itemId } = req.params;
     const { id: userId } = req.user;
@@ -392,14 +392,16 @@ router.post('/:id/promote', async (req, res) => {
       });
     }
 
-    // Create task from inbox item using object spread
-    const task = await Task.create({
+    // Import Draft model at top of file if not already done
+    const Draft = (await import('../models/Draft.js')).default;
+
+    // Create draft from inbox item
+    const draft = await Draft.create({
       user: userId,
       title: inboxItem.title,
-      description: inboxItem.notes,
-      inboxRef: inboxItem._id,
-      status: 'pending',
-      priority: 'medium'
+      notes: inboxItem.notes || '',
+      source: 'inbox',
+      inboxRef: inboxItem._id
     });
 
     // Mark inbox item as promoted
@@ -407,11 +409,119 @@ router.post('/:id/promote', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Inbox item promoted to task successfully',
+      message: 'Inbox item promoted to draft successfully',
       data: {
-        task,
+        draft,
         inboxItem
       }
+    });
+  } catch (error) {
+    console.error('Promote inbox item to draft error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while promoting inbox item to draft'
+    });
+  }
+});
+
+// @desc    Promote inbox item to task (direct promotion)
+// @route   POST /api/inbox/:id/promote
+// @access  Private
+router.post('/:id/promote', async (req, res) => {
+  try {
+    const { id: itemId } = req.params;
+    const { id: userId } = req.user;
+    const { createDraftFirst = false, ...taskData } = req.body;
+
+    const inboxItem = await InboxItem.findOne({
+      _id: itemId,
+      user: userId,
+      isDeleted: false
+    });
+
+    if (!inboxItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inbox item not found'
+      });
+    }
+
+    if (inboxItem.isPromoted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Inbox item is already promoted'
+      });
+    }
+
+    let result = {};
+
+    if (createDraftFirst) {
+      // Two-step promotion: inbox -> draft -> task
+      const Draft = (await import('../models/Draft.js')).default;
+      
+      // Create draft first
+      const draft = await Draft.create({
+        user: userId,
+        title: inboxItem.title,
+        notes: inboxItem.notes || '',
+        source: 'inbox',
+        inboxRef: inboxItem._id
+      });
+
+      // Then promote draft to task with additional task data
+      const task = await draft.promote({
+        priority: taskData.priority || 'medium',
+        group: taskData.group,
+        dueAt: taskData.dueAt ? new Date(taskData.dueAt) : undefined,
+        startAt: taskData.startAt ? new Date(taskData.startAt) : undefined,
+        tags: taskData.tags,
+        estimatedMinutes: taskData.estimatedMinutes,
+        isImportant: taskData.isImportant,
+        reminders: taskData.reminders?.map(r => new Date(r))
+      });
+
+      await task.populate([
+        { path: 'group', select: 'name color icon' },
+        { path: 'inboxRef', select: 'title notes' },
+        { path: 'draftRef', select: 'title notes source' }
+      ]);
+
+      result = { task, draft, inboxItem };
+    } else {
+      // Direct promotion: inbox -> task
+      const task = await Task.create({
+        user: userId,
+        title: inboxItem.title,
+        description: inboxItem.notes,
+        inboxRef: inboxItem._id,
+        status: 'pending',
+        priority: taskData.priority || 'medium',
+        group: taskData.group,
+        dueAt: taskData.dueAt ? new Date(taskData.dueAt) : undefined,
+        startAt: taskData.startAt ? new Date(taskData.startAt) : undefined,
+        tags: taskData.tags,
+        estimatedMinutes: taskData.estimatedMinutes,
+        isImportant: taskData.isImportant,
+        reminders: taskData.reminders?.map(r => new Date(r))
+      });
+
+      await task.populate([
+        { path: 'group', select: 'name color icon' },
+        { path: 'inboxRef', select: 'title notes' }
+      ]);
+
+      result = { task, inboxItem };
+    }
+
+    // Mark inbox item as promoted
+    await inboxItem.markAsPromoted();
+
+    res.json({
+      success: true,
+      message: createDraftFirst 
+        ? 'Inbox item promoted to task via draft successfully'
+        : 'Inbox item promoted to task successfully',
+      data: result
     });
   } catch (error) {
     console.error('Promote inbox item error:', error);

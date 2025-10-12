@@ -1,471 +1,726 @@
-import React, { useState, useEffect } from 'react';
-import { updateTask, createTask } from '../../api/tasks';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTheme } from '../../context/ThemeContext';
+import axios from 'axios';
 
-const TaskForm = ({ task, onSave, onCancel, groups = [], selectedGroupId = '' }) => {
+const TaskForm = ({ 
+  draft = null, 
+  task = null, 
+  onSave, 
+  onCancel, 
+  groups = [], 
+  selectedGroupId = '',
+  initialMode = 'modal' // 'modal', 'drawer', or 'page'
+}) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  const [mode, setMode] = useState(initialMode); // 'modal', 'drawer', or 'page'
+  const [currentDraft, setCurrentDraft] = useState(draft);
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
+  const [saveDebounceTimeout, setSaveDebounceTimeout] = useState(null);
+  
+  // Form data - starts with basic info for modal, expands for drawer
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
-    status: 'draft',
+    notes: '',
+    // Drawer-specific fields
     priority: 'medium',
-    dueDate: '',
+    group: selectedGroupId || '',
+    dueAt: '',
+    startAt: '',
     tags: [],
     isImportant: false,
-    group: selectedGroupId || '',
-    assignedTo: ''
+    estimatedMinutes: '',
+    reminders: []
   });
 
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tagInput, setTagInput] = useState('');
-
+  // Initialize form data from draft, task, or defaults
   useEffect(() => {
-    if (task) {
-      // Handle both dueDate and dueAt fields for backward compatibility
-      const dueDate = task.dueAt || task.dueDate;
-      const formattedDate = dueDate ? new Date(dueDate).toISOString().split('T')[0] : '';
+    if (draft) {
+      setFormData(prev => ({
+        ...prev,
+        title: draft.title || '',
+        notes: draft.notes || '',
+        // Keep existing drawer fields if switching from draft
+      }));
+      setCurrentDraft(draft);
+    } else if (task) {
+      const dueDate = task.dueAt ? new Date(task.dueAt).toISOString().split('T')[0] : '';
+      const startDate = task.startAt ? new Date(task.startAt).toISOString().split('T')[0] : '';
       
       setFormData({
         title: task.title || '',
-        description: task.description || '',
-        status: task.status || 'draft',
+        notes: task.description || '',
         priority: task.priority || 'medium',
-        dueDate: formattedDate,
+        group: task.group?._id || task.group || selectedGroupId || '',
+        dueAt: dueDate,
+        startAt: startDate,
         tags: task.tags || [],
         isImportant: task.isImportant || false,
-        group: task.group?._id || task.group || selectedGroupId || '',
-        assignedTo: task.assignedTo || ''
+        estimatedMinutes: task.estimatedMinutes || '',
+        reminders: task.reminders || []
       });
+      setMode('drawer'); // Tasks always open in drawer mode
     }
-  }, [task, selectedGroupId]);
+  }, [draft, task, selectedGroupId]);
+
+  // Debounced autosave for drafts
+  const debouncedSave = useCallback((data) => {
+    if (saveDebounceTimeout) {
+      clearTimeout(saveDebounceTimeout);
+    }
+    
+    const timeout = setTimeout(async () => {
+      if (currentDraft && data.title.trim()) {
+        try {
+          await axios.put(`/api/drafts/${currentDraft._id}`, {
+            title: data.title,
+            notes: data.notes
+          });
+        } catch (error) {
+          console.error('Autosave failed:', error);
+        }
+      }
+    }, 750); // 750ms debounce
+    
+    setSaveDebounceTimeout(timeout);
+  }, [currentDraft, saveDebounceTimeout]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    const newData = {
+      ...formData,
       [name]: type === 'checkbox' ? checked : value
-    }));
+    };
     
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+    setFormData(newData);
+    
+    // Autosave for modal fields (title, notes) when in draft mode
+    if (mode === 'drawer' && currentDraft && (name === 'title' || name === 'notes')) {
+      debouncedSave(newData);
     }
   };
 
-  const handleAddTag = (tag) => {
-    if (tag.trim() && !formData.tags.includes(tag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, tag.trim()]
-      }));
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
-  };
-
-  const handleTagInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag(tagInput);
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
+  // Create initial draft from modal
+  const createDraft = async () => {
+    if (!formData.title.trim()) return;
     
-    if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
-    }
-    
-    if (formData.title.length > 100) {
-      newErrors.title = 'Title must be less than 100 characters';
-    }
-    
-    if (formData.description.length > 500) {
-      newErrors.description = 'Description must be less than 500 characters';
-    }
-
-    // Enhanced group validation
-    if (!formData.group) {
-      newErrors.group = 'Please select a group';
-    } else {
-      // Check if the selected group exists in the available groups
-      const groupExists = groups.some(group => group._id === formData.group);
-      if (!groupExists) {
-        newErrors.group = 'Selected group is no longer available';
-      }
-    }
-
-    // Date validation
-    if (formData.dueDate && new Date(formData.dueDate) < new Date().setHours(0, 0, 0, 0)) {
-      newErrors.dueDate = 'Due date cannot be in the past';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
+    setIsCreatingDraft(true);
     try {
-      const submitData = { ...formData };
+      const response = await axios.post('/api/drafts', {
+        title: formData.title,
+        notes: formData.notes,
+        source: 'taskform'
+      });
       
-      // Clean up data
-      if (!submitData.dueDate) delete submitData.dueDate;
-      if (!submitData.assignedTo) delete submitData.assignedTo;
-      
-      // Convert date to ISO8601 format if provided
-      if (submitData.dueDate) {
-        const dateObj = new Date(submitData.dueDate);
-        if (!isNaN(dateObj.getTime())) {
-          submitData.dueDate = dateObj.toISOString();
-        }
-      }
+      setCurrentDraft(response.data.data);
+      setMode('drawer');
+    } catch (error) {
+      console.error('Error creating draft:', error);
+    } finally {
+      setIsCreatingDraft(false);
+    }
+  };
 
-      let response;
-      if (task?._id) {
-        // Update existing task
-        response = await updateTask(task._id, submitData);
-      } else {
-        // Create new task
-        response = await createTask(submitData);
-      }
+  // Save draft (drawer mode)
+  const saveDraft = async () => {
+    if (!currentDraft) return;
+    
+    setIsSaving(true);
+    try {
+      await axios.put(`/api/drafts/${currentDraft._id}`, {
+        title: formData.title,
+        notes: formData.notes
+      });
       
-      if (response.data.success) {
-        if (onSave) {
-          onSave(response.data.data);
-        }
+      if (onSave) {
+        onSave(currentDraft);
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Promote draft to task
+  const promoteDraft = async () => {
+    if (!currentDraft) return;
+    
+    setIsPromoting(true);
+    try {
+      const taskData = {
+        priority: formData.priority,
+        group: formData.group,
+        isImportant: formData.isImportant
+      };
+      
+      if (formData.dueAt) taskData.dueAt = new Date(formData.dueAt).toISOString();
+      if (formData.startAt) taskData.startAt = new Date(formData.startAt).toISOString();
+      if (formData.tags.length > 0) taskData.tags = formData.tags;
+      if (formData.estimatedMinutes) taskData.estimatedMinutes = parseInt(formData.estimatedMinutes);
+      
+      const response = await axios.post(`/api/drafts/${currentDraft._id}/promote`, taskData);
+      
+      if (onSave) {
+        onSave(response.data.data.task);
+      }
+    } catch (error) {
+      console.error('Error promoting draft:', error);
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
+  // Handle direct task creation/update for page mode
+  const handleTaskSubmit = async () => {
+    setIsSaving(true);
+    try {
+      const taskData = {
+        title: formData.title,
+        notes: formData.notes,
+        priority: formData.priority,
+        group: formData.group,
+        isImportant: formData.isImportant
+      };
+
+      if (formData.dueAt) taskData.dueAt = new Date(formData.dueAt).toISOString();
+      if (formData.startAt) taskData.startAt = new Date(formData.startAt).toISOString();
+      if (formData.tags.length > 0) taskData.tags = formData.tags;
+      if (formData.estimatedMinutes) taskData.estimatedMinutes = parseInt(formData.estimatedMinutes);
+
+      if (onSave) {
+        await onSave(taskData);
       }
     } catch (error) {
       console.error('Error saving task:', error);
-      setErrors({ general: error.response?.data?.message || 'Failed to save task' });
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
-  const isDraft = task?.status === 'draft';
-
-  return (
-    <div className="max-w-2xl">
-      {/* Back Button */}
-      <button
-        onClick={onCancel}
-        className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-6 transition-colors"
+  // Modal Phase 1: Simple title and notes input
+  const renderModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div 
+        className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-xl w-full max-w-md`}
+        style={{ maxHeight: '420px' }}
       >
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        <span>Back to tasks</span>
-      </button>
-
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full border border-gray-200">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {task ? (isDraft ? 'Edit Draft Task' : 'Edit Task') : 'Create New Task'}
+        {/* Modal Header */}
+        <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Quick Capture
           </h2>
-          {isDraft && (
-            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
-              DRAFT
-            </span>
-          )}
+          <button
+            onClick={onCancel}
+            className={`p-2 rounded-lg transition-colors ${
+              isDark 
+                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        {/* Inbox Reference Card - only show when creating new tasks */}
-        {!task && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start space-x-3">
-              <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-blue-900 text-sm mb-1">
-                  Need inspiration?
-                </h3>
-                <p className="text-blue-700 text-sm">
-                  Check your inbox sidebar for ideas. Once you create a task from an inbox item, 
-                  don't forget to <strong>delete the inbox item</strong> to keep things organized.
-                </p>
-                <div className="flex items-center space-x-2 mt-2 text-blue-600">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m16 0l-2-2m0 0l-2 2m2-2v4" />
-                  </svg>
-                  <span className="text-xs font-medium">Inbox items make great task starters!</span>
-                </div>
-              </div>
+        {/* Modal Content */}
+        <div className="p-6">
+          <div className="space-y-4">
+            <div>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                placeholder="What needs to be done?"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+                }`}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                placeholder="Add some notes... (optional)"
+                rows={3}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+                }`}
+              />
             </div>
           </div>
-        )}
-
-      {/* Display general errors */}
-      {errors?.general && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {errors.general}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
-            Title *
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-              errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            placeholder="Enter a descriptive task title"
-          />
-          {errors.title && (
-            <p className="mt-2 text-sm text-red-600 flex items-center">
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {errors.title}
-            </p>
-          )}
         </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
-            Description
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            rows="4"
-            value={formData.description}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none ${
-              errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-            placeholder="Provide additional details about this task (optional)"
-          />
-          {errors.description && (
-            <p className="mt-2 text-sm text-red-600 flex items-center">
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {errors.description}
-            </p>
-          )}
-          <p className="mt-2 text-sm text-gray-500 flex justify-between">
-            <span>Optional description for context and details</span>
-            <span>{formData.description.length}/500</span>
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="status" className="block text-sm font-semibold text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className={`w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="priority" className="block text-sm font-semibold text-gray-700 mb-2">
-              Priority
-            </label>
-            <select
-              id="priority"
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className={`w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <option value="low">🟢 Low Priority</option>
-              <option value="medium">🟡 Medium Priority</option>
-              <option value="high">🔴 High Priority</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
-            Due Date
-          </label>
-          <input
-            type="date"
-            id="dueDate"
-            name="dueDate"
-            value={formData.dueDate}
-            onChange={handleChange}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.dueDate ? 'border-red-300' : 'border-gray-300'
+        {/* Modal Footer */}
+        <div className={`flex justify-end space-x-3 p-6 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <button
+            onClick={onCancel}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isDark
+                ? 'text-gray-300 hover:bg-gray-700'
+                : 'text-gray-700 hover:bg-gray-100'
             }`}
-          />
-          {errors.dueDate && (
-            <p className="mt-1 text-sm text-red-600">{errors.dueDate}</p>
-          )}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={createDraft}
+            disabled={!formData.title.trim() || isCreatingDraft}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center space-x-2"
+          >
+            {isCreatingDraft && (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            )}
+            <span>Continue Editing →</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Drawer Phase 2: Full task editing
+  const renderDrawer = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+      <div 
+        className={`${isDark ? 'bg-gray-800' : 'bg-white'} shadow-xl flex flex-col`}
+        style={{ 
+          width: 'min(700px, 95vw)', 
+          maxHeight: '95vh' 
+        }}
+      >
+        {/* Drawer Header - Sticky */}
+        <div className={`sticky top-0 flex items-center justify-between p-6 border-b ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'} z-10`}>
+          <div>
+            <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {task ? 'Edit Task' : currentDraft ? 'Complete Task' : 'New Task'}
+            </h2>
+            {currentDraft && (
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} mt-1`}>
+                Draft created • Auto-saving changes
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onCancel}
+            className={`p-2 rounded-lg transition-colors ${
+              isDark 
+                ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
+        {/* Drawer Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Basic Fields */}
+          <div>
+            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+              Title
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500'
+              }`}
+              placeholder="What needs to be done?"
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+              Notes
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={4}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors resize-none ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500'
+              }`}
+              placeholder="Add detailed notes..."
+            />
+          </div>
+
+          {/* Priority and Group Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                Priority
+              </label>
+              <select
+                name="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+                }`}
+              >
+                <option value="low">🟢 Low</option>
+                <option value="medium">🟡 Medium</option>
+                <option value="high">🔴 High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                Group
+              </label>
+              <select
+                name="group"
+                value={formData.group}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+                }`}
+              >
+                <option value="">Select a group</option>
+                {groups.map(group => (
+                  <option key={group._id} value={group._id}>
+                    {group.icon} {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Date Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                Due Date
+              </label>
+              <input
+                type="date"
+                name="dueAt"
+                value={formData.dueAt}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                Start Date
+              </label>
+              <input
+                type="date"
+                name="startAt"
+                value={formData.startAt}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Important Toggle */}
+          <div className={`flex items-center p-4 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+            <input
+              type="checkbox"
+              id="isImportant"
+              name="isImportant"
+              checked={formData.isImportant}
+              onChange={handleChange}
+              className="h-5 w-5 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+            />
+            <label htmlFor="isImportant" className={`ml-3 flex items-center text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span className="text-yellow-500 mr-2">⭐</span>
+              Mark as important
+            </label>
+          </div>
+
+          {/* Estimated Time */}
+          <div>
+            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+              Estimated Time (minutes)
+            </label>
+            <input
+              type="number"
+              name="estimatedMinutes"
+              value={formData.estimatedMinutes}
+              onChange={handleChange}
+              min="1"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+              }`}
+              placeholder="How long will this take?"
+            />
+          </div>
+        </div>
+
+        {/* Drawer Footer - Sticky */}
+        <div className={`sticky bottom-0 flex justify-end space-x-3 p-6 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+          <button
+            onClick={onCancel}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isDark
+                ? 'text-gray-300 hover:bg-gray-700'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Cancel
+          </button>
+          
+          {currentDraft && (
+            <button
+              onClick={saveDraft}
+              disabled={isSaving}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                isDark
+                  ? 'bg-gray-600 text-white hover:bg-gray-500'
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              } disabled:opacity-50`}
+            >
+              {isSaving ? 'Saving...' : 'Save Draft'}
+            </button>
+          )}
+          
+          <button
+            onClick={currentDraft ? promoteDraft : saveDraft}
+            disabled={!formData.title.trim() || !formData.group || isPromoting}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center space-x-2"
+          >
+            {isPromoting && (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+            )}
+            <span>
+              {currentDraft ? 'Create Task' : task ? 'Update' : 'Create Task'}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Page mode: Renders form content for standalone page use
+  const renderPage = () => (
+    <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-200'} p-6 space-y-6`}>
+      {/* Basic Fields */}
+      <div>
+        <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+          Title
+        </label>
+        <input
+          type="text"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          placeholder="Task title"
+          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+            isDark
+              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+          }`}
+        />
+      </div>
+
+      <div>
+        <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+          Notes
+        </label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          placeholder="Additional details (optional)"
+          rows={4}
+          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 resize-vertical transition-colors ${
+            isDark
+              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+          }`}
+        />
+      </div>
+
+      {/* Priority and Group */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="group" className="block text-sm font-medium text-gray-700">
-            Group *
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+            Priority
           </label>
           <select
-            id="group"
+            name="priority"
+            value={formData.priority}
+            onChange={handleChange}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+            }`}
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+
+        <div>
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+            Group
+          </label>
+          <select
             name="group"
             value={formData.group}
             onChange={handleChange}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.group ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
             }`}
           >
             <option value="">Select a group</option>
             {groups.map(group => (
               <option key={group._id} value={group._id}>
-                {group.icon} {group.name}
+                {group.name}
               </option>
             ))}
           </select>
-          {errors.group && (
-            <p className="mt-1 text-sm text-red-600">{errors.group}</p>
-          )}
+        </div>
+      </div>
+
+      {/* Dates */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+            Start Date
+          </label>
+          <input
+            type="date"
+            name="startAt"
+            value={formData.startAt}
+            onChange={handleChange}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+            }`}
+          />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Tags
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+            Due Date
           </label>
-          <div className="space-y-3">
-            {/* Display existing tags */}
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium border border-purple-200 flex items-center"
-                  >
-                    #{tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      disabled={isSubmitting}
-                      className="ml-2 text-purple-600 hover:text-purple-800"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {/* Add new tag input */}
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={handleTagInputKeyPress}
-                disabled={isSubmitting}
-                className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                placeholder="Add a tag (press Enter)"
-              />
-              <button
-                type="button"
-                onClick={() => handleAddTag(tagInput)}
-                disabled={isSubmitting || !tagInput.trim()}
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Add
-              </button>
-            </div>
-            <p className="text-sm text-gray-500">
-              Tags help organize and categorize your tasks
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
           <input
-            type="checkbox"
-            id="isImportant"
-            name="isImportant"
-            checked={formData.isImportant}
+            type="date"
+            name="dueAt"
+            value={formData.dueAt}
             onChange={handleChange}
-            disabled={isSubmitting}
-            className="h-5 w-5 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+            }`}
           />
-          <label htmlFor="isImportant" className="ml-3 flex items-center text-sm font-medium text-gray-700">
-            <span className="text-red-500 mr-2">⭐</span>
-            Mark as important task
+        </div>
+      </div>
+
+      {/* Estimated Time and Important Flag */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+            Estimated Time (minutes)
           </label>
+          <input
+            type="number"
+            name="estimatedMinutes"
+            value={formData.estimatedMinutes}
+            onChange={handleChange}
+            placeholder="e.g., 30"
+            min="1"
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+            }`}
+          />
         </div>
 
-        <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isSubmitting}
-            className="px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting || !formData.title.trim()}
-            className="px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                Saving...
-              </>
-            ) : task ? (
-              isDraft ? 'Promote to Full Task' : 'Update Task'
-            ) : (
-              'Create Task'
-            )}
-          </button>
+        <div className="flex items-center">
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="isImportant"
+              checked={formData.isImportant}
+              onChange={handleChange}
+              className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+            />
+            <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Mark as Important
+            </span>
+          </label>
         </div>
-      </form>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            isDark
+              ? 'text-gray-300 bg-gray-700 hover:bg-gray-600 border border-gray-600'
+              : 'text-gray-700 bg-white hover:bg-gray-50 border border-gray-300'
+          }`}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleTaskSubmit}
+          disabled={!formData.title.trim() || !formData.group || isSaving}
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center space-x-2"
+        >
+          {isSaving && (
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+          )}
+          <span>
+            {task ? 'Update Task' : 'Create Task'}
+          </span>
+        </button>
       </div>
     </div>
   );
+
+  return mode === 'modal' ? renderModal() : mode === 'drawer' ? renderDrawer() : renderPage();
 };
 
 export default TaskForm;

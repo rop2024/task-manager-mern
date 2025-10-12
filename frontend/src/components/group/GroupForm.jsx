@@ -5,7 +5,8 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
     name: '',
     description: '',
     color: '#3B82F6',
-    icon: '📁'
+    icon: '📁',
+    endGoal: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -42,7 +43,8 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
         name: group.name || '',
         description: group.description || '',
         color: group.color || '#3B82F6',
-        icon: group.icon || '📁'
+        icon: group.icon || '📁',
+        endGoal: group.endGoal || ''
       });
     }
   }, [group]);
@@ -80,6 +82,10 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
 
     if (formData.description.length > 200) {
       newErrors.description = 'Description must be less than 200 characters';
+    }
+
+    if (formData.endGoal.length > 500) {
+      newErrors.endGoal = 'End goal must be less than 500 characters';
     }
 
     setErrors(newErrors);
@@ -183,6 +189,29 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
               />
             ))}
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="endGoal" className="block text-sm font-medium text-gray-700">
+            End Goal
+          </label>
+          <textarea
+            id="endGoal"
+            name="endGoal"
+            rows="3"
+            value={formData.endGoal}
+            onChange={handleChange}
+            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+              errors.endGoal ? 'border-red-300' : 'border-gray-300'
+            }`}
+            placeholder="Describe what you want to achieve with this group (optional)"
+          />
+          {errors.endGoal && (
+            <p className="mt-1 text-sm text-red-600">{errors.endGoal}</p>
+          )}
+          <p className="mt-1 text-sm text-gray-500">
+            {formData.endGoal.length}/500 characters
+          </p>
         </div>
 
         <div className="flex justify-end space-x-3 pt-4">

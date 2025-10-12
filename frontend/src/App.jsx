@@ -14,6 +14,8 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Inbox = lazy(() => import('./pages/Inbox'));
+const Groups = lazy(() => import('./pages/Groups'));
+const TaskFormPage = lazy(() => import('./pages/TaskFormPage'));
 
 
 // Loading component for lazy-loaded routes
@@ -107,6 +109,12 @@ function HomePage() {
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
                   >
                     Inbox
+                  </a>
+                  <a
+                    href="/groups"
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
+                  >
+                    Groups
                   </a>
                 </div>
               </div>
@@ -228,6 +236,30 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Inbox />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/groups" 
+                element={
+                  <ProtectedRoute>
+                    <Groups />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/tasks/new" 
+                element={
+                  <ProtectedRoute>
+                    <TaskFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/tasks/edit/:taskId" 
+                element={
+                  <ProtectedRoute>
+                    <TaskFormPage />
                   </ProtectedRoute>
                 } 
               />

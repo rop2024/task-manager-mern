@@ -65,6 +65,11 @@ const taskSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'InboxItem'
   },
+  // NEW: Reference to draft if task was promoted from draft
+  draftRef: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Draft'
+  },
   // NEW: Reference fields for user assignments
   assignedTo: {
     type: mongoose.Schema.ObjectId,

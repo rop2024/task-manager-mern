@@ -114,15 +114,6 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
 
   return (
     <div className="space-y-6">
-      {/* Quick Add Section */}
-      <div className="sticky top-0 z-10 bg-gray-50 pb-4">
-        <QuickAddTask 
-          onTaskCreated={handleTaskCreated}
-          onTaskRefresh={handleTaskUpdate}
-          className="mb-4"
-        />
-      </div>
-
       {/* Task List Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -16,6 +16,7 @@ import './models/Group.js';
 import './models/Task.js';
 import './models/Stats.js';
 import './models/InboxItem.js'; // NEW: Import InboxItem model
+import './models/Draft.js'; // NEW: Import Draft model
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -25,6 +26,7 @@ import statsRoutes from './routes/stats.js';
 import calendarRoutes from './routes/calendar.js';
 import completedRoutes from './routes/completed.js';
 import inboxRoutes from './routes/inbox.js'; // NEW: Import inbox routes
+import draftsRoutes from './routes/drafts.js'; // NEW: Import drafts routes
 import { startReminderScheduler } from './middleware/reminders.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 
@@ -85,6 +87,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/completed', completedRoutes);
 app.use('/api/inbox', inboxRoutes); // NEW: Added inbox routes API
+app.use('/api/drafts', draftsRoutes); // NEW: Added drafts routes API
 
 // Enhanced test routes
 app.get('/', (req, res) => res.json({
@@ -172,6 +175,7 @@ app.listen(PORT, () => {
     `📅 Calendar routes: http://localhost:${PORT}/api/calendar`,
     `✅ Completed tasks routes: http://localhost:${PORT}/api/completed`,
     `📥 Inbox routes: http://localhost:${PORT}/api/inbox`,
+    `📝 Drafts routes: http://localhost:${PORT}/api/drafts`,
     ...(process.env.NODE_ENV === 'production' ? ['🔔 Reminder scheduler: ACTIVE'] : [])
   ];
   
