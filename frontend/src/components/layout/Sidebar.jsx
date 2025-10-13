@@ -163,13 +163,15 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
 
       {/* Group Form Modal */}
       {showGroupForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <GroupForm
-            onSubmit={handleGroupCreate}
-            onCancel={() => setShowGroupForm(false)}
-            loading={false}
-            isDark={isDark}
-          />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-y-auto">
+          <div className="min-h-full py-8 flex items-center justify-center">
+            <GroupForm
+              onSubmit={handleGroupCreate}
+              onCancel={() => setShowGroupForm(false)}
+              loading={false}
+              isDark={isDark}
+            />
+          </div>
         </div>
       )}
 

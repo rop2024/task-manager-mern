@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     color: '#3B82F6',
     icon: '📁',
-    endGoal: ''
+    endGoal: '',
+    expectedDate: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -39,12 +43,14 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
 
   useEffect(() => {
     if (group) {
+      const expectedDate = group.expectedDate ? new Date(group.expectedDate).toISOString().split('T')[0] : '';
       setFormData({
         name: group.name || '',
         description: group.description || '',
         color: group.color || '#3B82F6',
         icon: group.icon || '📁',
-        endGoal: group.endGoal || ''
+        endGoal: group.endGoal || '',
+        expectedDate: expectedDate
       });
     }
   }, [group]);
@@ -97,18 +103,24 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
     
     if (!validateForm()) return;
 
-    onSubmit(formData);
+    // Convert expected date to ISO string if provided
+    const submitData = { ...formData };
+    if (submitData.expectedDate) {
+      submitData.expectedDate = new Date(submitData.expectedDate).toISOString();
+    }
+
+    onSubmit(submitData);
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+    <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'} p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto`}>
+      <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'} mb-6`}>
         {group ? 'Edit Group' : 'Create New Group'}
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="name" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
             Group Name *
           </label>
           <input
@@ -117,18 +129,20 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
             name="name"
             value={formData.name}
             onChange={handleChange}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.name ? 'border-red-300' : 'border-gray-300'
-            }`}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+            } ${errors.name ? 'border-red-500' : ''}`}
             placeholder="Enter group name"
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            <p className="mt-2 text-sm text-red-500">{errors.name}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="description" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
             Description
           </label>
           <textarea
@@ -137,21 +151,23 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
             rows="3"
             value={formData.description}
             onChange={handleChange}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.description ? 'border-red-300' : 'border-gray-300'
-            }`}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 resize-vertical transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+            } ${errors.description ? 'border-red-500' : ''}`}
             placeholder="Enter group description (optional)"
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+            <p className="mt-2 text-sm text-red-500">{errors.description}</p>
           )}
-          <p className="mt-1 text-sm text-gray-500">
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             {formData.description.length}/200 characters
           </p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
             Icon
           </label>
           <div className="grid grid-cols-5 gap-2">
@@ -160,8 +176,14 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
                 key={index}
                 type="button"
                 onClick={() => handleIconSelect(iconObj.emoji)}
-                className={`p-2 rounded-lg text-xl hover:bg-gray-100 transition-colors ${
-                  formData.icon === iconObj.emoji ? 'bg-blue-100 border-2 border-blue-500' : 'border border-gray-200'
+                className={`p-3 rounded-lg text-xl transition-colors ${
+                  formData.icon === iconObj.emoji 
+                    ? isDark 
+                      ? 'bg-blue-900 border-2 border-blue-500' 
+                      : 'bg-blue-100 border-2 border-blue-500'
+                    : isDark
+                      ? 'border border-gray-600 hover:bg-gray-700'
+                      : 'border border-gray-200 hover:bg-gray-100'
                 }`}
                 title={iconObj.label}
               >
@@ -172,17 +194,21 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
             Color
           </label>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-5 gap-3">
             {defaultColors.map((color, index) => (
               <button
                 key={index}
                 type="button"
                 onClick={() => handleColorSelect(color)}
-                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                  formData.color === color ? 'border-gray-800 scale-110' : 'border-gray-300'
+                className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-110 ${
+                  formData.color === color 
+                    ? 'border-gray-800 scale-110 shadow-lg' 
+                    : isDark 
+                      ? 'border-gray-600 hover:border-gray-400' 
+                      : 'border-gray-300 hover:border-gray-500'
                 }`}
                 style={{ backgroundColor: color }}
                 title={color}
@@ -192,7 +218,7 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
         </div>
 
         <div>
-          <label htmlFor="endGoal" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="endGoal" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
             End Goal
           </label>
           <textarea
@@ -201,39 +227,68 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
             rows="3"
             value={formData.endGoal}
             onChange={handleChange}
-            className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-              errors.endGoal ? 'border-red-300' : 'border-gray-300'
-            }`}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 resize-vertical transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+            } ${errors.endGoal ? 'border-red-500' : ''}`}
             placeholder="Describe what you want to achieve with this group (optional)"
           />
           {errors.endGoal && (
-            <p className="mt-1 text-sm text-red-600">{errors.endGoal}</p>
+            <p className="mt-2 text-sm text-red-500">{errors.endGoal}</p>
           )}
-          <p className="mt-1 text-sm text-gray-500">
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             {formData.endGoal.length}/500 characters
           </p>
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4">
+        <div>
+          <label htmlFor="expectedDate" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+            Expected Completion Date
+          </label>
+          <input
+            type="date"
+            id="expectedDate"
+            name="expectedDate"
+            value={formData.expectedDate}
+            onChange={handleChange}
+            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+              isDark
+                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
+                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+            }`}
+          />
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            When do you aim to complete this group's goals? (optional)
+          </p>
+        </div>
+
+        <div className={`flex justify-end space-x-3 pt-6 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className={`px-6 py-3 border rounded-lg font-medium transition-colors ${
+              isDark
+                ? 'border-gray-600 text-gray-300 bg-gray-700 hover:bg-gray-600'
+                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+            }`}
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 
+                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors
+                     flex items-center space-x-2"
           >
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
-            ) : group ? (
-              'Update Group'
-            ) : (
-              'Create Group'
+            {loading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             )}
+            <span>
+              {group ? 'Update Group' : 'Create Group'}
+            </span>
           </button>
         </div>
       </form>

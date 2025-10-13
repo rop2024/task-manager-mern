@@ -429,6 +429,126 @@ const TasksPage = () => {
               </nav>
             )}
 
+            {/* Group Header - Show group details prominently */}
+            {selectedGroup && (
+              <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6 py-4`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    {/* Group Icon and Basic Info */}
+                    <div 
+                      className="p-3 rounded-xl text-2xl"
+                      style={{ backgroundColor: `${selectedGroup.color}20` }}
+                    >
+                      {selectedGroup.icon}
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {selectedGroup.name}
+                        </h2>
+                        {selectedGroup.isCompleted && (
+                          <div className="flex items-center space-x-1">
+                            <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className={`text-sm font-medium ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                              Completed
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {selectedGroup.description && (
+                        <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} mb-3`}>
+                          {selectedGroup.description}
+                        </p>
+                      )}
+
+                      {/* End Goal and Expected Date in a row */}
+                      {(selectedGroup.endGoal || selectedGroup.expectedDate) && (
+                        <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-3 lg:space-y-0">
+                          {/* End Goal */}
+                          {selectedGroup.endGoal && (
+                            <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-3 flex-1`}>
+                              <div className="flex items-center space-x-2 mb-1">
+                                <svg className={`h-4 w-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                </svg>
+                                <span className={`text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  END GOAL
+                                </span>
+                              </div>
+                              <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'} leading-relaxed`}>
+                                {selectedGroup.endGoal}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Expected Completion Date */}
+                          {selectedGroup.expectedDate && (
+                            <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-3 lg:w-64`}>
+                              <div className="flex items-center space-x-2 mb-1">
+                                <svg className={`h-4 w-4 ${isDark ? 'text-green-400' : 'text-green-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className={`text-xs font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  TARGET DATE
+                                </span>
+                              </div>
+                              <p className={`text-sm font-semibold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                                {new Date(selectedGroup.expectedDate).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </p>
+                              {/* Show days remaining */}
+                              {!selectedGroup.isCompleted && (
+                                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {(() => {
+                                    const today = new Date();
+                                    const targetDate = new Date(selectedGroup.expectedDate);
+                                    const diffTime = targetDate - today;
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    if (diffDays > 0) {
+                                      return `${diffDays} days remaining`;
+                                    } else if (diffDays === 0) {
+                                      return 'Due today';
+                                    } else {
+                                      return `${Math.abs(diffDays)} days overdue`;
+                                    }
+                                  })()}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setEditingGroup(selectedGroup)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        isDark 
+                          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' 
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                      title="Edit Group"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Content Area */}
             <div className="flex-1 flex">
               {/* Task Form & List */}
@@ -500,13 +620,15 @@ const TasksPage = () => {
 
         {/* Edit Group Modal */}
         {editingGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <GroupForm
-              group={editingGroup}
-              onSubmit={(data) => handleUpdateGroup(editingGroup._id, data)}
-              onCancel={() => setEditingGroup(null)}
-              loading={loading}
-            />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-y-auto">
+            <div className="min-h-full py-8 flex items-center justify-center">
+              <GroupForm
+                group={editingGroup}
+                onSubmit={(data) => handleUpdateGroup(editingGroup._id, data)}
+                onCancel={() => setEditingGroup(null)}
+                loading={loading}
+              />
+            </div>
           </div>
         )}
 

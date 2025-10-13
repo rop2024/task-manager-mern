@@ -40,6 +40,9 @@ const groupSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'End goal cannot be more than 500 characters']
   },
+  expectedDate: {
+    type: Date
+  },
   isCompleted: {
     type: Boolean,
     default: false,
