@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import PromptSelector from './PromptSelector';
 import axios from 'axios';
 
 const TaskForm = ({ 
@@ -34,6 +35,10 @@ const TaskForm = ({
     estimatedMinutes: '',
     reminders: []
   });
+  
+  // Prompting system state - initialize after formData
+  const [showPrompts, setShowPrompts] = useState(false);
+  const [promptUsed, setPromptUsed] = useState(false);
 
   // Initialize form data from draft, task, or defaults
   useEffect(() => {
@@ -45,6 +50,7 @@ const TaskForm = ({
         // Keep existing drawer fields if switching from draft
       }));
       setCurrentDraft(draft);
+      setShowPrompts(false); // Don't show prompts for existing drafts
     } else if (task) {
       const dueDate = task.dueAt ? new Date(task.dueAt).toISOString().split('T')[0] : '';
       
@@ -60,6 +66,11 @@ const TaskForm = ({
         reminders: task.reminders || []
       });
       setMode('drawer'); // Tasks always open in drawer mode
+      setShowPrompts(false); // Don't show prompts for existing tasks
+    } else {
+      // New task - show prompts if no title (check after state initialization)
+      const initialTitle = formData.title?.trim() || '';
+      setShowPrompts(!initialTitle && !draft && !task);
     }
   }, [draft, task, selectedGroupId]);
 
@@ -98,6 +109,26 @@ const TaskForm = ({
     if (mode === 'drawer' && currentDraft && (name === 'title' || name === 'notes')) {
       debouncedSave(newData);
     }
+    
+    // Hide prompts when user starts typing
+    if (name === 'title' && value.trim() && showPrompts) {
+      setShowPrompts(false);
+    }
+  };
+
+  // Handle prompt selection
+  const handlePromptSelect = (promptText) => {
+    setFormData(prev => ({
+      ...prev,
+      title: promptText
+    }));
+    setPromptUsed(true);
+    setShowPrompts(false);
+  };
+
+  // Toggle prompt visibility
+  const togglePrompts = () => {
+    setShowPrompts(!showPrompts);
   };
 
   // Create initial draft from modal
@@ -224,21 +255,54 @@ const TaskForm = ({
 
         {/* Modal Content */}
         <div className="p-6">
+          {/* Prompt Selector - Show for new tasks */}
+          {showPrompts && (
+            <PromptSelector
+              onPromptSelect={handlePromptSelect}
+              onClose={() => setShowPrompts(false)}
+              isVisible={showPrompts}
+            />
+          )}
+
           <div className="space-y-4">
             <div>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="What needs to be done?"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                  isDark
-                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
-                }`}
-                autoFocus
-              />
+              <div className="flex items-center space-x-2 mb-2">
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder={showPrompts ? "Or type your own task..." : "What needs to be done?"}
+                  className={`flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                    isDark
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  autoFocus={!showPrompts}
+                />
+                
+                {/* Prompt Toggle Button */}
+                <button
+                  type="button"
+                  onClick={togglePrompts}
+                  className={`px-3 py-3 rounded-lg transition-colors ${
+                    showPrompts
+                      ? 'bg-purple-500 text-white hover:bg-purple-600'
+                      : isDark 
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+                  }`}
+                  title={showPrompts ? "Hide prompts" : "Get prompt inspiration"}
+                >
+                  <span className="text-sm">🧠</span>
+                </button>
+              </div>
+              
+              {promptUsed && !showPrompts && (
+                <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                  ✨ Prompt used! Edit as needed or continue with more details.
+                </div>
+              )}
             </div>
 
             <div>
@@ -323,11 +387,38 @@ const TaskForm = ({
 
         {/* Drawer Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Prompt Selector for new tasks */}
+          {showPrompts && !task && (
+            <PromptSelector
+              onPromptSelect={handlePromptSelect}
+              onClose={() => setShowPrompts(false)}
+              isVisible={showPrompts}
+            />
+          )}
+
           {/* Basic Fields */}
           <div>
-            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-              Title
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              {!task && (
+                <button
+                  type="button"
+                  onClick={togglePrompts}
+                  className={`text-xs px-2 py-1 rounded transition-colors ${
+                    showPrompts
+                      ? 'bg-purple-500 text-white hover:bg-purple-600'
+                      : isDark 
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title={showPrompts ? "Hide thinking prompts" : "Get thinking prompts"}
+                >
+                  🧠 {showPrompts ? 'Hide' : 'Prompts'}
+                </button>
+              )}
+            </div>
             <input
               type="text"
               name="title"
@@ -508,23 +599,57 @@ const TaskForm = ({
   // Page mode: Renders form content for standalone page use
   const renderPage = () => (
     <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-200'} p-6 space-y-6`}>
+      {/* Prompt Selector for new tasks */}
+      {showPrompts && !task && (
+        <PromptSelector
+          onPromptSelect={handlePromptSelect}
+          onClose={() => setShowPrompts(false)}
+          isVisible={showPrompts}
+        />
+      )}
+
       {/* Basic Fields */}
       <div>
-        <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-          Title
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            Title
+          </label>
+          {!task && (
+            <button
+              type="button"
+              onClick={togglePrompts}
+              className={`text-sm px-3 py-1 rounded transition-colors ${
+                showPrompts
+                  ? 'bg-purple-500 text-white hover:bg-purple-600'
+                  : isDark 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={showPrompts ? "Hide thinking prompts" : "Get thinking prompts"}
+            >
+              🧠 {showPrompts ? 'Hide Prompts' : 'Get Prompts'}
+            </button>
+          )}
+        </div>
+        
         <input
           type="text"
           name="title"
           value={formData.title}
           onChange={handleChange}
-          placeholder="Task title"
+          placeholder={showPrompts ? "Choose a prompt or type your own..." : "Task title"}
           className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
             isDark
               ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500'
               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500'
           }`}
         />
+        
+        {promptUsed && !showPrompts && (
+          <div className={`text-sm ${isDark ? 'text-purple-400' : 'text-purple-600'} mt-2`}>
+            ✨ Prompt used! Edit as needed or continue with more details.
+          </div>
+        )}
       </div>
 
       <div>

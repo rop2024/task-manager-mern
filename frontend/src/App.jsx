@@ -16,6 +16,8 @@ const Calendar = lazy(() => import('./pages/Calendar'));
 const Inbox = lazy(() => import('./pages/Inbox'));
 const Groups = lazy(() => import('./pages/Groups'));
 const TaskFormPage = lazy(() => import('./pages/TaskFormPage'));
+const RouteTestPage = lazy(() => import('./pages/RouteTestPage'));
+const PromptTestPage = lazy(() => import('./pages/PromptTestPage'));
 
 
 // Loading component for lazy-loaded routes
@@ -256,6 +258,14 @@ function App() {
                 } 
               />
               <Route 
+                path="/task/new" 
+                element={
+                  <ProtectedRoute>
+                    <TaskFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/tasks/edit/:taskId" 
                 element={
                   <ProtectedRoute>
@@ -263,6 +273,17 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/task/edit/:taskId" 
+                element={
+                  <ProtectedRoute>
+                    <TaskFormPage />
+                  </ProtectedRoute>
+                } 
+              />
+              {/* Temporary debug routes */}
+              <Route path="/debug/routes" element={<RouteTestPage />} />
+              <Route path="/debug/prompts" element={<PromptTestPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
