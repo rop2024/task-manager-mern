@@ -29,7 +29,6 @@ const TaskForm = ({
     priority: 'medium',
     group: selectedGroupId || '',
     dueAt: '',
-    startAt: '',
     tags: [],
     isImportant: false,
     estimatedMinutes: '',
@@ -48,7 +47,6 @@ const TaskForm = ({
       setCurrentDraft(draft);
     } else if (task) {
       const dueDate = task.dueAt ? new Date(task.dueAt).toISOString().split('T')[0] : '';
-      const startDate = task.startAt ? new Date(task.startAt).toISOString().split('T')[0] : '';
       
       setFormData({
         title: task.title || '',
@@ -56,7 +54,6 @@ const TaskForm = ({
         priority: task.priority || 'medium',
         group: task.group?._id || task.group || selectedGroupId || '',
         dueAt: dueDate,
-        startAt: startDate,
         tags: task.tags || [],
         isImportant: task.isImportant || false,
         estimatedMinutes: task.estimatedMinutes || '',
@@ -158,7 +155,6 @@ const TaskForm = ({
       };
       
       if (formData.dueAt) taskData.dueAt = new Date(formData.dueAt).toISOString();
-      if (formData.startAt) taskData.startAt = new Date(formData.startAt).toISOString();
       if (formData.tags.length > 0) taskData.tags = formData.tags;
       if (formData.estimatedMinutes) taskData.estimatedMinutes = parseInt(formData.estimatedMinutes);
       
@@ -187,7 +183,6 @@ const TaskForm = ({
       };
 
       if (formData.dueAt) taskData.dueAt = new Date(formData.dueAt).toISOString();
-      if (formData.startAt) taskData.startAt = new Date(formData.startAt).toISOString();
       if (formData.tags.length > 0) taskData.tags = formData.tags;
       if (formData.estimatedMinutes) taskData.estimatedMinutes = parseInt(formData.estimatedMinutes);
 
@@ -411,41 +406,22 @@ const TaskForm = ({
             </div>
           </div>
 
-          {/* Date Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                Due Date
-              </label>
-              <input
-                type="date"
-                name="dueAt"
-                value={formData.dueAt}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                  isDark
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                Start Date
-              </label>
-              <input
-                type="date"
-                name="startAt"
-                value={formData.startAt}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                  isDark
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
-                }`}
-              />
-            </div>
+          {/* Due Date Field */}
+          <div>
+            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+              Due Date
+            </label>
+            <input
+              type="date"
+              name="dueAt"
+              value={formData.dueAt}
+              onChange={handleChange}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                isDark
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+              }`}
+            />
           </div>
 
           {/* Important Toggle */}
@@ -616,41 +592,22 @@ const TaskForm = ({
         </div>
       </div>
 
-      {/* Dates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-            Start Date
-          </label>
-          <input
-            type="date"
-            name="startAt"
-            value={formData.startAt}
-            onChange={handleChange}
-            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-              isDark
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
-                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
-            }`}
-          />
-        </div>
-
-        <div>
-          <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-            Due Date
-          </label>
-          <input
-            type="date"
-            name="dueAt"
-            value={formData.dueAt}
-            onChange={handleChange}
-            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-              isDark
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
-                : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
-            }`}
-          />
-        </div>
+      {/* Due Date */}
+      <div>
+        <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+          Due Date
+        </label>
+        <input
+          type="date"
+          name="dueAt"
+          value={formData.dueAt}
+          onChange={handleChange}
+          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+            isDark
+              ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500 focus:border-blue-500'
+              : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+          }`}
+        />
       </div>
 
       {/* Estimated Time and Important Flag */}

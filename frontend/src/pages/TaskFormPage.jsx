@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import TaskForm from '../components/tasks/TaskForm';
+import DraftsList from '../components/tasks/DraftsList';
 import axios from 'axios';
 
 const TaskFormPage = () => {
@@ -83,6 +84,15 @@ const TaskFormPage = () => {
     navigate(-1); // Go back to previous page
   };
 
+  const handleDraftPromoted = () => {
+    // Refresh page after draft is promoted to task
+    navigate('/tasks', { 
+      state: { 
+        message: 'Draft promoted to task successfully'
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
@@ -121,16 +131,65 @@ const TaskFormPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-8 max-w-4xl">
-        <TaskForm
-          task={task}
-          draft={draftData}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          groups={groups}
-          selectedGroupId={selectedGroupId}
-          initialMode="page"
-        />
+      <main className="flex-1 flex">
+        {/* For new tasks, show both drafts and form */}
+        {!taskId ? (
+          <>
+            {/* Draft Inbox - Left Half */}
+            <div className={`w-1/2 ${isDark ? 'bg-gray-800' : 'bg-white'} border-r ${isDark ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
+              <div className="p-6 border-b border-gray-200">
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+                  Draft Inbox
+                </h2>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Quick ideas waiting to become tasks
+                </p>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <DraftsList
+                  onDraftPromoted={handleDraftPromoted}
+                  showInSidebar={true}
+                />
+              </div>
+            </div>
+
+            {/* Task Form - Right Half */}
+            <div className="w-1/2 flex flex-col">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+                  New Task
+                </h2>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Create a detailed task with all information
+                </p>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <TaskForm
+                  task={task}
+                  draft={draftData}
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  groups={groups}
+                  selectedGroupId={selectedGroupId}
+                  initialMode="page"
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* For editing tasks, show only the form */
+          <div className="flex-1 container mx-auto px-6 py-8 max-w-4xl">
+            <TaskForm
+              task={task}
+              draft={draftData}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              groups={groups}
+              selectedGroupId={selectedGroupId}
+              initialMode="page"
+            />
+          </div>
+        )}
       </main>
     </div>
   );

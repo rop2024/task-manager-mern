@@ -12,7 +12,6 @@ import TaskStats from '../components/tasks/TaskStats';
 import GroupForm from '../components/group/GroupForm';
 import CompletedTasksPanel from '../components/tasks/CompletedTasksPanel';
 import FloatingAddButton from '../components/ui/FloatingAddButton';
-import DraftsList from '../components/tasks/DraftsList';
 
 const TasksPage = () => {
   const { user } = useAuth();
@@ -30,7 +29,7 @@ const TasksPage = () => {
     const saved = localStorage.getItem('sidebarVisible');
     return saved !== null ? JSON.parse(saved) : true;
   });
-  const [activeTab, setActiveTab] = useState('active'); // 'active', 'completed', 'drafts'
+  const [activeTab, setActiveTab] = useState('active'); // 'active', 'completed'
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
@@ -426,28 +425,6 @@ const TasksPage = () => {
                       </span>
                     )}
                   </button>
-
-                  <button
-                    onClick={() => setActiveTab('drafts')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === 'drafts'
-                        ? isDark
-                          ? 'border-purple-400 text-purple-300'
-                          : 'border-purple-500 text-purple-600'
-                        : isDark
-                          ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Drafts
-                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                      activeTab === 'drafts'
-                        ? isDark ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-600'
-                        : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      New
-                    </span>
-                  </button>
                 </div>
               </nav>
             )}
@@ -489,17 +466,6 @@ const TasksPage = () => {
                           fetchGroups();
                         }}
                         showCompleted={true}
-                      />
-                    )}
-
-                    {/* Drafts */}
-                    {activeTab === 'drafts' && (
-                      <DraftsList
-                        onDraftPromoted={() => {
-                          fetchTasks();
-                          fetchStats();
-                          fetchGroups();
-                        }}
                       />
                     )}
                   </div>

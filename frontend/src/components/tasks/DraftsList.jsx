@@ -3,7 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../hooks/useToast';
 import axios from 'axios';
 
-const DraftsList = () => {
+const DraftsList = ({ onDraftPromoted, showInSidebar = false }) => {
   const { theme } = useTheme();
   const { addToast } = useToast();
   const isDark = theme === 'dark';
@@ -18,7 +18,8 @@ const DraftsList = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (filter !== 'all') {
+      // Only apply filters when not in sidebar mode
+      if (!showInSidebar && filter !== 'all') {
         params.append('source', filter);
       }
       
@@ -34,7 +35,7 @@ const DraftsList = () => {
 
   useEffect(() => {
     fetchDrafts();
-  }, [filter]);
+  }, [filter, showInSidebar]);
 
   // Handle draft promotion
   const handlePromoteDraft = async (draftId) => {
@@ -46,6 +47,11 @@ const DraftsList = () => {
       setDrafts(prev => prev.filter(draft => draft._id !== draftId));
       
       addToast('Draft promoted to task successfully!', 'success');
+      
+      // Call callback if provided
+      if (onDraftPromoted) {
+        onDraftPromoted(response.data.data);
+      }
     } catch (error) {
       console.error('Error promoting draft:', error);
       addToast('Failed to promote draft', 'error');
@@ -106,31 +112,33 @@ const DraftsList = () => {
 
   return (
     <div className="space-y-6">
-      {/* Filter Tabs */}
-      <div className={`flex space-x-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-1`}>
-        {[
-          { value: 'all', label: 'All Drafts' },
-          { value: 'quick', label: 'Quick Capture' },
-          { value: 'inbox', label: 'From Inbox' },
-          { value: 'taskform', label: 'Task Form' }
-        ].map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setFilter(tab.value)}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              filter === tab.value
-                ? isDark 
-                  ? 'bg-gray-700 text-blue-300'
-                  : 'bg-white text-blue-600 shadow-sm'
-                : isDark
-                  ? 'text-gray-300 hover:text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Filter Tabs - Only show when not in sidebar */}
+      {!showInSidebar && (
+        <div className={`flex space-x-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg p-1`}>
+          {[
+            { value: 'all', label: 'All Drafts' },
+            { value: 'quick', label: 'Quick Capture' },
+            { value: 'inbox', label: 'From Inbox' },
+            { value: 'taskform', label: 'Task Form' }
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setFilter(tab.value)}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                filter === tab.value
+                  ? isDark 
+                    ? 'bg-gray-700 text-blue-300'
+                    : 'bg-white text-blue-600 shadow-sm'
+                  : isDark
+                    ? 'text-gray-300 hover:text-white'
+                    : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Drafts List */}
       {drafts.length === 0 ? (
