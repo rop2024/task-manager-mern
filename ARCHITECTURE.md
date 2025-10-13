@@ -14,7 +14,7 @@ The Task Manager is a modern full-stack application built with the MERN stack (M
 - **Group Organization**: Categorize tasks into color-coded groups with custom icons
 - **Calendar Integration**: View tasks in calendar format with reminders and scheduling
 - **Productivity Analytics**: Track completion rates, streaks, and productivity scores
-- **Real-time Statistics**: Dashboard with leaderboards and personal metrics
+- **Real-time Statistics**: Dashboard with personal metrics and analytics
 - **Recurrence Support**: Set up recurring tasks with flexible patterns
 - **Reminders System**: Background scheduler for task notifications
 
@@ -198,7 +198,7 @@ backend/
 │   ├── inbox.js             # Inbox item operations
 │   ├── calendar.js          # Calendar view & reminders
 │   ├── completed.js         # Completed task analytics
-│   ├── stats.js             # Statistics & leaderboard
+│   ├── stats.js             # Statistics & analytics
 │   └── tasks/
 │       └── quick.js         # Quick task creation
 ├── middleware/               # Custom middleware
@@ -249,7 +249,7 @@ frontend/
     │   │   └── GroupForm.jsx     # Group creation/editing
     │   ├── scoreboard/
     │   │   ├── StatsOverview.jsx # Personal statistics
-    │   │   ├── Leaderboard.jsx   # User rankings
+
     │   │   ├── ProductivityScore.jsx # Score display
     │   │   └── StatsCard.jsx     # Metric cards
     │   ├── LoginForm.jsx         # User login
@@ -623,7 +623,7 @@ Response: 201 Created
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/stats` | User statistics |
-| GET | `/stats/leaderboard` | Top users ranking |
+
 | GET | `/stats/rank` | User rank position |
 | POST | `/stats/update` | Refresh statistics |
 | GET | `/stats/history` | Stats history (7 days) |
@@ -2667,7 +2667,7 @@ git push origin feature/new-feature-name
 | **Task** | `Task.js` | Core task management, recurrence, reminders |
 | **InboxItem** | `InboxItem.js` | Quick capture, promotion to tasks |
 | **Group** | `Group.js` | Task organization, color coding |
-| **Stats** | `Stats.js` | Productivity metrics, leaderboard |
+| **Stats** | `Stats.js` | Productivity metrics and analytics |
 
 #### Route Handlers (`backend/routes/`)
 | Route File | Endpoints | Functionality |
@@ -2678,7 +2678,7 @@ git push origin feature/new-feature-name
 | `inbox.js` | `/api/inbox/*` | Inbox items, promotion workflow |
 | `calendar.js` | `/api/calendar/*` | Calendar view, reminders |
 | `completed.js` | `/api/completed/*` | Completed task analytics |
-| `stats.js` | `/api/stats/*` | User statistics, leaderboard |
+| `stats.js` | `/api/stats/*` | User statistics and analytics |
 | `tasks/quick.js` | `/api/tasks/quick/*` | Quick task creation |
 
 #### Middleware (`backend/middleware/`)
@@ -2707,7 +2707,7 @@ git push origin feature/new-feature-name
 | `calendar/` | CalendarView, CalendarTaskForm, RemindersList | Calendar features |
 | `inbox/` | InboxItemCard, InboxSidebar, InboxStats, QuickAddInput | Inbox management with retry UI |
 | `group/` | GroupForm | Group creation/editing |
-| `scoreboard/` | StatsOverview, Leaderboard, ProductivityScore | Analytics dashboard |
+| `scoreboard/` | StatsOverview, ProductivityScore | Analytics dashboard |
 
 **Inbox System Components Detail**:
 - `InboxItemCard`: Individual inbox item with delete functionality and retry states

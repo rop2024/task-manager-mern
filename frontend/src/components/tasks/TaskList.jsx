@@ -4,22 +4,45 @@ import TaskItem from './TaskItem';
 import QuickAddTask from './QuickAddTask';
 import axios from 'axios';
 
-const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
-  const [tasks, setTasks] = useState([]);
+const TaskList = ({ 
+  tasks: propTasks = null, 
+  showDrafts = false, 
+  onTaskEdit, 
+  onTaskRefresh, 
+  onTasksChange,
+  showCompleted = false 
+}) => {
+  const [internalTasks, setInternalTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, active, completed, drafts
   const [refreshFlag, setRefreshFlag] = useState(0);
 
+  // Use props tasks if provided, otherwise load internal tasks
+  const tasks = propTasks || internalTasks;
+  const isUsingPropTasks = propTasks !== null;
+
   useEffect(() => {
-    loadTasks();
-  }, [refreshFlag, showDrafts]);
+    if (!isUsingPropTasks) {
+      loadTasks();
+    } else {
+      setLoading(false);
+    }
+  }, [refreshFlag, showDrafts, isUsingPropTasks]);
 
   const handleTaskComplete = async (taskId) => {
     try {
       const response = await axios.put(`/api/tasks/${taskId}/complete`);
       if (response.data.success) {
-        setTasks(prev => prev.filter(task => task._id !== taskId));
-        setRefreshFlag(prev => prev + 1);
+        if (isUsingPropTasks && onTasksChange) {
+          // Update parent component's tasks
+          onTasksChange(prev => prev.filter(task => task._id !== taskId));
+        } else {
+          // Update internal tasks
+          setInternalTasks(prev => prev.filter(task => task._id !== taskId));
+        }
+        if (onTaskRefresh) {
+          onTaskRefresh();
+        }
       }
     } catch (error) {
       console.error('Error completing task:', error);
@@ -51,12 +74,14 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
   };
 
   const loadTasks = async () => {
+    if (isUsingPropTasks) return; // Don't load if using prop tasks
+    
     try {
       setLoading(true);
       const response = await getTasksWithDrafts();
       
       if (response.data.success) {
-        setTasks(response.data.data);
+        setInternalTasks(response.data.data);
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -66,18 +91,20 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
     }
   };
 
-  const filteredTasks = tasks.filter(task => {
-    switch (filter) {
-      case 'active':
-        return task.status === 'pending' || task.status === 'in-progress';
-      case 'completed':
-        return task.status === 'completed';
-      case 'drafts':
-        return task.status === 'draft';
-      default:
-        return true;
-    }
-  });
+  const filteredTasks = isUsingPropTasks 
+    ? tasks // Use tasks as-is when passed from parent (already filtered)
+    : tasks.filter(task => {
+        switch (filter) {
+          case 'active':
+            return task.status === 'pending' || task.status === 'in-progress';
+          case 'completed':
+            return task.status === 'completed';
+          case 'drafts':
+            return task.status === 'draft';
+          default:
+            return true;
+        }
+      });
 
   const draftTasks = tasks.filter(task => task.status === 'draft');
   const activeTasks = tasks.filter(task => 
@@ -86,9 +113,15 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
   const completedTasks = tasks.filter(task => task.status === 'completed');
 
   const handleTaskCreated = (newTask) => {
-    // Add task to local state and trigger refresh
-    setTasks(prev => [newTask, ...prev]);
-    setRefreshFlag(prev => prev + 1);
+    if (isUsingPropTasks && onTasksChange) {
+      // Update parent component's tasks
+      onTasksChange(prev => [newTask, ...prev]);
+    } else {
+      // Add task to internal state and trigger refresh
+      setInternalTasks(prev => [newTask, ...prev]);
+      setRefreshFlag(prev => prev + 1);
+    }
+    
     console.log('New task captured:', newTask);
     
     // Optional external refresh callback
@@ -98,8 +131,15 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
   };
 
   const handleTaskUpdate = () => {
-    setRefreshFlag(prev => prev + 1);
-    loadTasks();
+    if (isUsingPropTasks) {
+      // Let parent handle updates
+      if (onTaskRefresh) {
+        onTaskRefresh();
+      }
+    } else {
+      setRefreshFlag(prev => prev + 1);
+      loadTasks();
+    }
   };
 
   if (loading) {
@@ -145,25 +185,27 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
             </div>
           </div>
 
-          {/* Filter Dropdown and View Toggle */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <label htmlFor="task-filter" className="text-sm font-medium text-gray-700">
-                Filter:
-              </label>
-              <select 
-                id="task-filter"
-                value={filter} 
-                onChange={(e) => setFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
-              >
-                <option value="all">All Tasks</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="drafts">Drafts</option>
-              </select>
+          {/* Filter Dropdown and View Toggle - Only show when not using prop tasks */}
+          {!isUsingPropTasks && (
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <label htmlFor="task-filter" className="text-sm font-medium text-gray-700">
+                  Filter:
+                </label>
+                <select 
+                  id="task-filter"
+                  value={filter} 
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                >
+                  <option value="all">All Tasks</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="drafts">Drafts</option>
+                </select>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -244,15 +286,18 @@ const TaskList = ({ showDrafts = false, onTaskEdit, onTaskRefresh }) => {
             {/* Task Count Header */}
             <div className="flex items-center justify-between px-1">
               <h2 className="text-lg font-semibold text-gray-800">
-                {filter === 'all' ? 'All Tasks' : 
-                 filter === 'active' ? 'Active Tasks' :
-                 filter === 'completed' ? 'Completed Tasks' : 'Draft Tasks'}
+                {isUsingPropTasks 
+                  ? showCompleted ? 'Completed Tasks' : 'Active Tasks'
+                  : filter === 'all' ? 'All Tasks' : 
+                    filter === 'active' ? 'Active Tasks' :
+                    filter === 'completed' ? 'Completed Tasks' : 'Draft Tasks'
+                }
                 <span className="ml-2 text-sm font-normal text-gray-500">
                   ({filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'})
                 </span>
               </h2>
               
-              {filteredTasks.length > 1 && (
+              {filteredTasks.length > 1 && !isUsingPropTasks && (
                 <button
                   onClick={loadTasks}
                   className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"

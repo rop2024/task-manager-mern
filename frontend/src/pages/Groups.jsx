@@ -435,46 +435,119 @@ const Groups = () => {
                     </p>
                   )}
 
-                  {/* End Goal and Expected Date */}
+                  {/* End Goal and Expected Date - Wide Block Format */}
                   {(group.endGoal || group.expectedDate) && (
-                    <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-4 mb-4 space-y-3`}>
-                      {/* End Goal */}
-                      {group.endGoal && (
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <svg className={`h-4 w-4 ${isDark ? 'text-blue-400' : 'text-blue-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className={`${isDark ? 'bg-gradient-to-r from-gray-700 to-gray-800' : 'bg-gradient-to-r from-gray-50 to-gray-100'} 
+                                   rounded-xl p-6 mb-4 border-l-4 border-l-blue-500 shadow-sm`}>
+                      {/* Header Section */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+                            <svg className={`h-5 w-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                             </svg>
-                            <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                              Goal
-                            </span>
                           </div>
-                          <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'} leading-relaxed`}>
-                            {group.endGoal}
-                          </p>
+                          <h4 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            Goal & Timeline
+                          </h4>
                         </div>
-                      )}
+                        
+                        {/* Progress Indicator */}
+                        {group.isCompleted && (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span className="text-sm font-medium">Achieved</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
-                      {/* Expected Completion Date */}
-                      {group.expectedDate && (
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <svg className={`h-4 w-4 ${isDark ? 'text-green-400' : 'text-green-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                              Expected Completion
-                            </span>
+                      {/* Content Section */}
+                      <div className="space-y-5">
+                        {/* End Goal */}
+                        {group.endGoal && (
+                          <div className={`${isDark ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg p-4 border border-opacity-20 ${isDark ? 'border-gray-600' : 'border-gray-300'}`}>
+                            <div className="flex items-start space-x-3">
+                              <div className={`mt-1 p-1 rounded-full ${isDark ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
+                                <svg className={`h-4 w-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h5 className={`text-sm font-semibold ${isDark ? 'text-gray-200' : 'text-gray-800'} mb-2`}>
+                                  Primary Goal
+                                </h5>
+                                <p className={`text-base ${isDark ? 'text-gray-100' : 'text-gray-900'} leading-relaxed font-medium`}>
+                                  {group.endGoal}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <p className={`text-sm font-medium ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                            {new Date(group.expectedDate).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </p>
-                        </div>
-                      )}
+                        )}
+
+                        {/* Expected Completion Date */}
+                        {group.expectedDate && (
+                          <div className={`${isDark ? 'bg-gray-800/50' : 'bg-white/80'} rounded-lg p-4 border border-opacity-20 ${isDark ? 'border-gray-600' : 'border-gray-300'}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className={`p-1 rounded-full ${isDark ? 'bg-green-900/30' : 'bg-green-50'}`}>
+                                  <svg className={`h-4 w-4 ${isDark ? 'text-green-400' : 'text-green-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h5 className={`text-sm font-semibold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                                    Target Completion
+                                  </h5>
+                                  <p className={`text-lg font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                                    {new Date(group.expectedDate).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Time Remaining Indicator */}
+                              {!group.isCompleted && (
+                                <div className="text-right">
+                                  {(() => {
+                                    const now = new Date();
+                                    const targetDate = new Date(group.expectedDate);
+                                    const diffTime = targetDate - now;
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    if (diffDays > 0) {
+                                      return (
+                                        <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                                          <span className="font-medium">{diffDays}</span> 
+                                          <span className="ml-1">day{diffDays !== 1 ? 's' : ''} remaining</span>
+                                        </div>
+                                      );
+                                    } else if (diffDays === 0) {
+                                      return (
+                                        <div className="text-sm font-medium text-orange-600">
+                                          Due today!
+                                        </div>
+                                      );
+                                    } else {
+                                      return (
+                                        <div className="text-sm font-medium text-red-500">
+                                          {Math.abs(diffDays)} day{Math.abs(diffDays) !== 1 ? 's' : ''} overdue
+                                        </div>
+                                      );
+                                    }
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 

@@ -340,22 +340,6 @@ statsSchema.statics.getUserRank = async function(userId) {
   }
 };
 
-// Method to get leaderboard
-statsSchema.statics.getLeaderboard = async function(limit = 10) {
-  try {
-    const leaderboard = await this.find({})
-      .populate('user', 'name email')
-      .sort({ productivityScore: -1, completedTasks: -1, currentStreak: -1 })
-      .limit(limit)
-      .select('user productivityScore completedTasks totalTasks completionRate currentStreak weeklyCompleted');
-
-    return leaderboard;
-  } catch (error) {
-    console.error('Error getting leaderboard:', error);
-    throw error;
-  }
-};
-
 // Method to reset stats (for testing/debugging)
 statsSchema.statics.resetUserStats = async function(userId) {
   try {

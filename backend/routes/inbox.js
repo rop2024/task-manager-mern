@@ -2,7 +2,7 @@ import express from 'express';
 import { body, validationResult, query } from 'express-validator';
 import InboxItem from '../models/InboxItem.js';
 import Task from '../models/Task.js';
-import { protect } from '../middleware/auth.js';
+import { protect, verifyOwnership, verifyBulkOwnership } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -138,21 +138,16 @@ router.get('/', validateGetInbox, async (req, res) => {
 // @desc    Get single inbox item
 // @route   GET /api/inbox/:id
 // @access  Private
-router.get('/:id', async (req, res) => {
+router.get('/:id', verifyOwnership('InboxItem'), async (req, res) => {
   try {
-    const { id: itemId } = req.params;
-    const { id: userId } = req.user;
+    // Resource is already verified and available in req.resource
+    const inboxItem = req.resource;
 
-    const inboxItem = await InboxItem.findOne({
-      _id: itemId,
-      user: userId,
-      isDeleted: false
-    });
-
-    if (!inboxItem) {
+    if (inboxItem.isDeleted) {
       return res.status(404).json({
         success: false,
-        message: 'Inbox item not found'
+        message: 'Inbox item not found',
+        code: 'ITEM_DELETED'
       });
     }
 
@@ -185,7 +180,7 @@ const validateUpdateInbox = [
     .withMessage('Notes cannot be more than 1000 characters')
 ];
 
-router.put('/:id', validateUpdateInbox, async (req, res) => {
+router.put('/:id', verifyOwnership('InboxItem'), validateUpdateInbox, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -239,7 +234,7 @@ router.put('/:id', validateUpdateInbox, async (req, res) => {
 // @desc    Delete inbox item
 // @route   DELETE /api/inbox/:id
 // @access  Private
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyOwnership('InboxItem'), async (req, res) => {
   try {
     const inboxItem = await InboxItem.findOne({
       _id: req.params.id,
@@ -542,7 +537,7 @@ router.delete('/bulk', [
   body('itemIds.*')
     .isMongoId()
     .withMessage('Each item ID must be a valid ID')
-], async (req, res) => {
+], verifyBulkOwnership('InboxItem', 'itemIds'), async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

@@ -2,7 +2,7 @@ import React from 'react';
 import ProductivityScore from './ProductivityScore';
 import StatsCard from './StatsCard';
 
-const StatsOverview = ({ stats, rank, loading }) => {
+const StatsOverview = ({ stats, loading }) => {
   if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
@@ -40,69 +40,51 @@ const StatsOverview = ({ stats, rank, loading }) => {
             <p className="text-gray-600 mt-2">
               Your performance based on task completion, streaks, and activity
             </p>
-            {rank && (
-              <div className="mt-3 flex items-center justify-center lg:justify-start space-x-4 text-sm">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                  Rank: {rank.rank} of {rank.totalUsers}
-                </span>
-                <span className="text-gray-600">
-                  Top {rank.percentile}%
-                </span>
-              </div>
-            )}
           </div>
           <ProductivityScore score={productivityScore} size="large" />
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Tasks"
-          value={stats.totalTasks || 0}
-          subtitle="All time"
-          icon="📋"
-          color="blue"
-        />
+      {/* Task Status Block */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          📋 Task Overview
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="text-2xl font-bold text-blue-600">{stats.totalTasks || 0}</div>
+            <div className="text-sm text-blue-700 font-medium">Total Tasks</div>
+            <div className="text-xs text-blue-600 mt-1">All time</div>
+          </div>
+          
+          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="text-2xl font-bold text-green-600">{stats.completedTasks || 0}</div>
+            <div className="text-sm text-green-700 font-medium">Completed</div>
+            <div className="text-xs text-green-600 mt-1">{completionRate}% completion rate</div>
+          </div>
+          
+          <div className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+            <div className="text-2xl font-bold text-indigo-600">{stats.inProgressTasks || 0}</div>
+            <div className="text-sm text-indigo-700 font-medium">In Progress</div>
+            <div className="text-xs text-indigo-600 mt-1">Active tasks</div>
+          </div>
+          
+          <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+            <div className="text-2xl font-bold text-red-600">{stats.overdueTasks || 0}</div>
+            <div className="text-sm text-red-700 font-medium">Overdue</div>
+            <div className="text-xs text-red-600 mt-1">Need attention</div>
+          </div>
+        </div>
+      </div>
 
-        <StatsCard
-          title="Completed"
-          value={stats.completedTasks || 0}
-          subtitle={`${completionRate}% completion rate`}
-          icon="✅"
-          color="green"
-          trend={{
-            direction: stats.weeklyCompleted > 0 ? 'up' : 'neutral',
-            value: `${stats.weeklyCompleted || 0} this week`,
-            period: ''
-          }}
-        />
-
+      {/* Streak & Priority Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard
           title="Current Streak"
           value={stats.currentStreak || 0}
           subtitle="Days in a row"
-          icon="🔥"
+          icon="�"
           color="yellow"
-        />
-
-        <StatsCard
-          title="Overdue"
-          value={stats.overdueTasks || 0}
-          subtitle="Need attention"
-          icon="⏰"
-          color="red"
-        />
-      </div>
-
-      {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatsCard
-          title="In Progress"
-          value={stats.inProgressTasks || 0}
-          subtitle="Active tasks"
-          icon="🔄"
-          color="indigo"
         />
 
         <StatsCard

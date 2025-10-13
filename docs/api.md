@@ -566,33 +566,6 @@ GET /stats
 }
 ```
 
-### Get Leaderboard
-```http
-GET /stats/leaderboard
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "_id": "stats_id",
-      "user": {
-        "_id": "user_id",
-        "name": "John Doe",
-        "email": "john@example.com"
-      },
-      "productivityScore": 95,
-      "completedTasks": 42,
-      "totalTasks": 50,
-      "completionRate": 84,
-      "currentStreak": 7
-    }
-  ]
-}
-```
-
 ### Get User Rank
 ```http
 GET /stats/rank

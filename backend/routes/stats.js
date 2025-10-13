@@ -29,30 +29,6 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// @desc    Get leaderboard (top users by productivity score)
-// @route   GET /api/stats/leaderboard
-// @access  Private
-router.get('/leaderboard', protect, async (req, res) => {
-  try {
-    const leaderboard = await Stats.find({})
-      .populate('user', 'name email')
-      .sort({ productivityScore: -1, completedTasks: -1 })
-      .limit(10)
-      .select('user productivityScore completedTasks totalTasks completionRate currentStreak');
-
-    res.json({
-      success: true,
-      data: leaderboard
-    });
-  } catch (error) {
-    console.error('Get leaderboard error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching leaderboard'
-    });
-  }
-});
-
 // @desc    Get user rank
 // @route   GET /api/stats/rank
 // @access  Private

@@ -94,7 +94,7 @@ const TasksPage = () => {
   }, []);
 
   useEffect(() => {
-    if (groups.length > 0) {
+    if (groups.length >= 0) {  // Changed from > 0 to >= 0 to allow fetching even with no groups
       fetchTasks();
       fetchStats();
     }
@@ -358,7 +358,7 @@ const TasksPage = () => {
               </div>
                 
                 <div className="flex items-center space-x-3">
-                  {selectedGroup && (
+                  {selectedGroup ? (
                     <button
                       onClick={() => navigate('/tasks/new', { 
                         state: { selectedGroupId: selectedGroup._id } 
@@ -369,65 +369,67 @@ const TasksPage = () => {
                     >
                       <span>+ New Task</span>
                     </button>
+                  ) : (
+                    <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} bg-gray-100 px-3 py-2 rounded-lg`}>
+                      Select a group to create tasks
+                    </div>
                   )}
                 </div>
               </div>
             </header>
 
             {/* Tab Navigation */}
-            {selectedGroup && (
-              <nav className={`flex-shrink-0 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6`}>
-                <div className="flex space-x-8">
-                  <button
-                    onClick={() => setActiveTab('active')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+            <nav className={`flex-shrink-0 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6`}>
+              <div className="flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('active')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'active'
+                      ? isDark
+                        ? 'border-blue-400 text-blue-300'
+                        : 'border-blue-500 text-blue-600'
+                      : isDark
+                        ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Active Tasks
+                  {activeCount > 0 && (
+                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
                       activeTab === 'active'
-                        ? isDark
-                          ? 'border-blue-400 text-blue-300'
-                          : 'border-blue-500 text-blue-600'
-                        : isDark
-                          ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Active Tasks
-                    {activeCount > 0 && (
-                      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                        activeTab === 'active'
-                          ? isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
-                          : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {activeCount}
-                      </span>
-                    )}
-                  </button>
+                        ? isDark ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-600'
+                        : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {activeCount}
+                    </span>
+                  )}
+                </button>
 
-                  <button
-                    onClick={() => setActiveTab('completed')}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                <button
+                  onClick={() => setActiveTab('completed')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'completed'
+                      ? isDark
+                        ? 'border-green-400 text-green-300'
+                        : 'border-green-500 text-green-600'
+                      : isDark
+                        ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Completed
+                  {completedCount > 0 && (
+                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
                       activeTab === 'completed'
-                        ? isDark
-                          ? 'border-green-400 text-green-300'
-                          : 'border-green-500 text-green-600'
-                        : isDark
-                          ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    Completed
-                    {completedCount > 0 && (
-                      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                        activeTab === 'completed'
-                          ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-600'
-                          : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {completedCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </nav>
-            )}
+                        ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-600'
+                        : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {completedCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </nav>
 
             {/* Group Header - Show group details prominently */}
             {selectedGroup && (
@@ -553,59 +555,58 @@ const TasksPage = () => {
             <div className="flex-1 flex">
               {/* Task Form & List */}
               <div className="flex-1 flex flex-col">
-                {selectedGroup ? (
-                  <div className="flex-1">
-                    {/* Stats - show for active and completed tabs */}
-                    {(activeTab === 'active' || activeTab === 'completed') && (
-                      <TaskStats stats={stats} loading={loading} />
-                    )}
-                    
-                    {/* Active Tasks */}
-                    {activeTab === 'active' && (
-                      <TaskList
-                        tasks={tasks.filter(task => task.status !== 'completed')}
-                        onTasksChange={setTasks}
-                        onTaskEdit={(task) => navigate(`/tasks/edit/${task._id}`)}
-                        onTaskRefresh={() => {
-                          fetchTasks();
-                          fetchStats();
-                          fetchGroups();
-                        }}
-                      />
-                    )}
+                <div className="flex-1">
+                  {/* Show All Tasks header when no group selected */}
+                  {!selectedGroup && (
+                    <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6 py-4`}>
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">📋</div>
+                        <div>
+                          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            All Tasks
+                          </h2>
+                          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                            View all your tasks across all groups
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                    {/* Completed Tasks */}
-                    {activeTab === 'completed' && (
-                      <TaskList
-                        tasks={tasks.filter(task => task.status === 'completed')}
-                        onTasksChange={setTasks}
-                        onTaskEdit={(task) => navigate(`/tasks/edit/${task._id}`)}
-                        onTaskRefresh={() => {
-                          fetchTasks();
-                          fetchStats();
-                          fetchGroups();
-                        }}
-                        showCompleted={true}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className={`flex-1 ${isDark ? 'bg-gray-800' : 'bg-white'} p-12 text-center`}>
-                    <div className="text-6xl mb-4">📋</div>
-                    <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                      No Group Selected
-                    </h3>
-                    <p className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                      Choose a group from the sidebar to view and manage your tasks
-                    </p>
-                    <button
-                      onClick={() => setSidebarVisible(true)}
-                      className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Open Sidebar
-                    </button>
-                  </div>
-                )}
+                  {/* Stats - show for active and completed tabs */}
+                  {(activeTab === 'active' || activeTab === 'completed') && (
+                    <TaskStats stats={stats} loading={loading} />
+                  )}
+                  
+                  {/* Active Tasks */}
+                  {activeTab === 'active' && (
+                    <TaskList
+                      tasks={tasks.filter(task => task.status !== 'completed')}
+                      onTasksChange={setTasks}
+                      onTaskEdit={(task) => navigate(`/tasks/edit/${task._id}`)}
+                      onTaskRefresh={() => {
+                        fetchTasks();
+                        fetchStats();
+                        fetchGroups();
+                      }}
+                    />
+                  )}
+
+                  {/* Completed Tasks */}
+                  {activeTab === 'completed' && (
+                    <TaskList
+                      tasks={tasks.filter(task => task.status === 'completed')}
+                      onTasksChange={setTasks}
+                      onTaskEdit={(task) => navigate(`/tasks/edit/${task._id}`)}
+                      onTaskRefresh={() => {
+                        fetchTasks();
+                        fetchStats();
+                        fetchGroups();
+                      }}
+                      showCompleted={true}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>

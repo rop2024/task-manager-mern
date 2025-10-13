@@ -4,8 +4,21 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import https from 'https';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+
+// Import security middleware
+import { 
+  securityHeaders, 
+  apiLimiter, 
+  authLimiter,
+  corsOptions,
+  securityLogger,
+  securityMonitor,
+  getSecurityConfig
+} from './middleware/security.js';
 
 // Initialize dotenv
 dotenv.config();
@@ -33,43 +46,36 @@ import { generalLimiter } from './middleware/rateLimiter.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration - FIXED
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:3000",
-  "http://localhost:5173" // Vite default port
-].filter(Boolean); // Remove any undefined values
+// Get security configuration for current environment
+const securityConfig = getSecurityConfig();
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.some(allowedOrigin => 
-      origin === allowedOrigin || 
-      origin.startsWith(allowedOrigin.replace('https://', 'http://'))
-    )) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+// Enhanced security middleware
+app.use(securityLogger); // Log security events
+app.use(securityMonitor); // Monitor suspicious activities
+app.use(cors(corsOptions)); // Secure CORS configuration
+app.use(securityHeaders); // Enhanced security headers
 
-// Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" } // Important for CORS
+// Logging configuration based on environment
+if (process.env.NODE_ENV === 'production') {
+  app.use(morgan('combined'));
+} else {
+  app.use(morgan('dev'));
+}
+
+// Body parsing middleware with size limits
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req, res, buf) => {
+    // Store raw body for webhook verification if needed
+    req.rawBody = buf;
+  }
 }));
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Apply general rate limiting to all routes
-app.use(generalLimiter);
+// Apply rate limiting based on environment configuration
+if (securityConfig.rateLimit.enabled) {
+  app.use(apiLimiter);
+}
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/phase1-db', {
@@ -79,15 +85,15 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/phase1-db
 .then(() => console.log('✅ MongoDB Atlas connected successfully'))
 .catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Mount routes
-app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes); // This now includes both regular and quick routes
+// Mount routes with security middleware
+app.use('/api/auth', authLimiter, authRoutes); // Extra rate limiting for auth
+app.use('/api/tasks', taskRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/completed', completedRoutes);
-app.use('/api/inbox', inboxRoutes); // NEW: Added inbox routes API
-app.use('/api/drafts', draftsRoutes); // NEW: Added drafts routes API
+app.use('/api/inbox', inboxRoutes);
+app.use('/api/drafts', draftsRoutes);
 
 // Enhanced test routes
 app.get('/', (req, res) => res.json({
@@ -165,19 +171,56 @@ if (process.env.NODE_ENV === 'production') {
   startReminderScheduler();
 }
 
-app.listen(PORT, () => {
-  const messages = [
-    `🎯 Backend server running on port ${PORT}`,
-    `📍 Environment: ${process.env.NODE_ENV}`,
-    `🌐 Allowed CORS origins: ${allowedOrigins.join(', ')}`,
-    `🔗 Health check: http://localhost:${PORT}/api/health`,
-    `🔐 Auth routes available at: http://localhost:${PORT}/api/auth`,
-    `📅 Calendar routes: http://localhost:${PORT}/api/calendar`,
-    `✅ Completed tasks routes: http://localhost:${PORT}/api/completed`,
-    `📥 Inbox routes: http://localhost:${PORT}/api/inbox`,
-    `📝 Drafts routes: http://localhost:${PORT}/api/drafts`,
-    ...(process.env.NODE_ENV === 'production' ? ['🔔 Reminder scheduler: ACTIVE'] : [])
-  ];
-  
-  messages.forEach(message => console.log(message));
-});
+// Server startup with HTTPS support in production
+const startServer = () => {
+  if (process.env.NODE_ENV === 'production' && process.env.FORCE_HTTPS === 'true') {
+    // Production HTTPS server
+    const httpsOptions = {
+      key: fs.readFileSync(process.env.SSL_KEY_PATH),
+      cert: fs.readFileSync(process.env.SSL_CERT_PATH)
+    };
+
+    const httpsServer = https.createServer(httpsOptions, app);
+    
+    httpsServer.listen(PORT, () => {
+      console.log(`🔒 HTTPS Server running securely on port ${PORT}`);
+      console.log(`🛡️ Security level: PRODUCTION`);
+      console.log(`🌐 Domain: ${process.env.FRONTEND_URL}`);
+    });
+
+    // Also start HTTP server for redirects
+    const httpApp = express();
+    httpApp.use((req, res) => {
+      res.redirect(`https://${req.headers.host}${req.url}`);
+    });
+    httpApp.listen(80, () => {
+      console.log('🔀 HTTP redirect server running on port 80');
+    });
+
+  } else {
+    // Development or staging HTTP server
+    app.listen(PORT, () => {
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const allowedOrigins = corsOptions.origin ? 'Configured' : 'All origins';
+      
+      const messages = [
+        `🎯 ${process.env.NODE_ENV?.toUpperCase() || 'DEV'} server running on ${protocol}://localhost:${PORT}`,
+        `🛡️ Security config: ${securityConfig.rateLimit.enabled ? 'ENABLED' : 'RELAXED'}`,
+        `🌐 CORS policy: ${allowedOrigins}`,
+        `📊 Rate limiting: ${securityConfig.rateLimit.max} requests/${securityConfig.rateLimit.windowMs/60000} minutes`,
+        `🔗 Health check: ${protocol}://localhost:${PORT}/api/health`,
+        `🔐 Auth routes: ${protocol}://localhost:${PORT}/api/auth`,
+        `📅 Calendar: ${protocol}://localhost:${PORT}/api/calendar`,
+        `✅ Completed: ${protocol}://localhost:${PORT}/api/completed`,
+        `📥 Inbox: ${protocol}://localhost:${PORT}/api/inbox`,
+        `📝 Drafts: ${protocol}://localhost:${PORT}/api/drafts`,
+        ...(process.env.NODE_ENV === 'production' ? ['🔔 Reminder scheduler: ACTIVE'] : []),
+        `🔍 Security logging: ${securityConfig.logging.securityEvents ? 'ENABLED' : 'DISABLED'}`
+      ];
+      
+      messages.forEach(message => console.log(message));
+    });
+  }
+};
+
+startServer();

@@ -3,29 +3,19 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import StatsOverview from '../components/scoreboard/StatsOverview';
-import Leaderboard from '../components/scoreboard/Leaderboard';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [userRank, setUserRank] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
 
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const [statsResponse, leaderboardResponse, rankResponse] = await Promise.all([
-        axios.get('/api/stats'),
-        axios.get('/api/stats/leaderboard'),
-        axios.get('/api/stats/rank')
-      ]);
+      const statsResponse = await axios.get('/api/stats');
 
       setStats(statsResponse.data.data);
-      setLeaderboard(leaderboardResponse.data.data);
-      setUserRank(rankResponse.data.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -66,11 +56,11 @@ const Dashboard = () => {
           </div>
           <div className="flex space-x-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/home')}
               className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011 1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               Home
             </button>
@@ -137,93 +127,11 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'overview'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                📊 Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('leaderboard')}
-                className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'leaderboard'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                🏆 Leaderboard
-              </button>
-            </nav>
-          </div>
-        </div>
-
         {/* Content */}
-        {activeTab === 'overview' && (
-          <StatsOverview 
-            stats={stats} 
-            rank={userRank}
-            loading={loading} 
-          />
-        )}
-
-        {activeTab === 'leaderboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Leaderboard 
-                data={leaderboard} 
-                currentUserId={user?.id}
-                loading={loading}
-              />
-            </div>
-            <div className="space-y-6">
-              {/* Quick Stats */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Ranking</h3>
-                {userRank ? (
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-blue-600">{userRank.rank}</div>
-                      <div className="text-sm text-gray-600">Current Rank</div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <div className="text-lg font-semibold">{userRank.totalUsers}</div>
-                        <div className="text-xs text-gray-600">Total Users</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-semibold">Top {userRank.percentile}%</div>
-                        <div className="text-xs text-gray-600">Percentile</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 py-4">
-                    Complete tasks to get ranked!
-                  </div>
-                )}
-              </div>
-
-              {/* Tips */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-yellow-800 mb-3">💡 Improve Your Score</h3>
-                <ul className="text-sm text-yellow-700 space-y-2">
-                  <li>• Complete tasks consistently to build streaks</li>
-                  <li>• Avoid overdue tasks to prevent score penalties</li>
-                  <li>• Balance task priorities for optimal productivity</li>
-                  <li>• Use groups to organize related tasks</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
+        <StatsOverview 
+          stats={stats} 
+          loading={loading} 
+        />
       </div>
     </div>
   );

@@ -8,7 +8,16 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "migrate:tasks": "node scripts/migrateTasks.js"
+    "migrate:tasks": "node scripts/migrateTasks.js",
+    "setup:security": "node scripts/setup-security.js",
+    "setup:dev": "node scripts/setup-security.js development",
+    "setup:staging": "node scripts/setup-security.js staging", 
+    "setup:prod": "node scripts/setup-security.js production",
+    "test:security": "echo 'Import docs/security-test-collection.json into Postman for comprehensive security testing'",
+    "verify:security": "node scripts/verify-security.js",
+    "audit:security": "npm audit && echo 'Security audit completed. Review any vulnerabilities above.'",
+    "start:prod": "NODE_ENV=production node server.js",
+    "start:staging": "NODE_ENV=staging node server.js"
   },
   "keywords": [
     "backend",

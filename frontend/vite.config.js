@@ -44,7 +44,6 @@ export default defineConfig({
           ],
           
           'scoreboard': [
-            './src/components/scoreboard/Leaderboard.jsx',
             './src/components/scoreboard/ProductivityScore.jsx',
             './src/components/scoreboard/StatsCard.jsx',
             './src/components/scoreboard/StatsOverview.jsx'

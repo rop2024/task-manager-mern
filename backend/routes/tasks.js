@@ -2,7 +2,7 @@ import express from 'express';
 import { body, validationResult, query } from 'express-validator';
 import Task from '../models/Task.js';
 import Group from '../models/Group.js';
-import { protect } from '../middleware/auth.js';
+import { protect, verifyOwnership, verifyBulkOwnership } from '../middleware/auth.js';
 import { updateStatsAfterTaskChange } from '../middleware/statsUpdater.js';
 
 const router = express.Router();
@@ -400,6 +400,7 @@ router.delete(
 router.patch(
   '/bulk',
   protect,
+  verifyBulkOwnership('Task', 'taskIds'),
   updateStatsAfterTaskChange,   // ✅ Added stats middleware
   async (req, res) => {
     try {
@@ -590,23 +591,14 @@ router.get('/', protect, [
 // @desc    Get task by ID
 // @route   GET /api/tasks/:id
 // @access  Private
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', protect, verifyOwnership('Task'), async (req, res) => {
   try {
-    const task = await Task.findOne({
-      _id: req.params.id,
-      user: req.user.id
-    }).populate([
+    // Task ownership already verified by middleware, populate additional data
+    const task = await req.resource.populate([
       { path: 'group', select: 'name color icon' },
       { path: 'createdBy', select: 'name email' },
       { path: 'assignedTo', select: 'name email' }
     ]);
-    
-    if (!task) {
-      return res.status(404).json({
-        success: false,
-        message: 'Task not found'
-      });
-    }
     
     res.json({
       success: true,
