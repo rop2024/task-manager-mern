@@ -92,6 +92,78 @@ router.post('/update', protect, async (req, res) => {
   }
 });
 
+// @desc    Get weekly stats
+// @route   GET /api/stats/weekly
+// @access  Private
+router.get('/weekly', protect, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date and end date are required'
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Import Task model to get completed tasks for the week
+    const Task = (await import('../models/Task.js')).default;
+
+    // Get completed tasks for the week
+    const completedTasks = await Task.find({
+      user: req.user.id,
+      isCompleted: true,
+      completedAt: {
+        $gte: start,
+        $lte: end
+      }
+    }).populate('group', 'name color icon');
+
+    // Calculate weekly statistics
+    const weeklyStats = {
+      totalCompleted: completedTasks.length,
+      totalTimeSpent: completedTasks.reduce((sum, task) => sum + (task.estimatedMinutes || 0), 0),
+      priorityBreakdown: completedTasks.reduce((acc, task) => {
+        acc[task.priority || 'medium'] = (acc[task.priority || 'medium'] || 0) + 1;
+        return acc;
+      }, {}),
+      groupBreakdown: completedTasks.reduce((acc, task) => {
+        const groupName = task.group?.name || 'No Group';
+        acc[groupName] = (acc[groupName] || 0) + 1;
+        return acc;
+      }, {}),
+      dailyCompletion: Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(start);
+        date.setDate(date.getDate() + i);
+        const dayTasks = completedTasks.filter(task => {
+          const taskDate = new Date(task.completedAt);
+          return taskDate.toDateString() === date.toDateString();
+        });
+        return {
+          date: date.toISOString().split('T')[0],
+          count: dayTasks.length,
+          timeSpent: dayTasks.reduce((sum, task) => sum + (task.estimatedMinutes || 0), 0)
+        };
+      }),
+      weekRange: { start, end }
+    };
+
+    res.json({
+      success: true,
+      data: weeklyStats
+    });
+  } catch (error) {
+    console.error('Get weekly stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching weekly statistics'
+    });
+  }
+});
+
 // @desc    Get stats history (simplified - last 7 days)
 // @route   GET /api/stats/history
 // @access  Private

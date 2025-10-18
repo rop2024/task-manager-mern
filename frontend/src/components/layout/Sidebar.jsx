@@ -86,6 +86,42 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
             <span className="mr-3">📋</span>
             All Tasks
           </Link>
+          
+          <Link
+            to="/dashboard"
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              location.pathname === '/dashboard'
+                ? `${isDark ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700'} border-r-2 border-green-600`
+                : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+            }`}
+          >
+            <span className="mr-3">📈</span>
+            Dashboard
+          </Link>
+          
+          <Link
+            to="/calendar"
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              location.pathname === '/calendar'
+                ? `${isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700'} border-r-2 border-purple-600`
+                : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+            }`}
+          >
+            <span className="mr-3">📅</span>
+            Calendar
+          </Link>
+          
+          <Link
+            to="/inbox"
+            className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              location.pathname === '/inbox'
+                ? `${isDark ? 'bg-yellow-900 text-yellow-300' : 'bg-yellow-100 text-yellow-700'} border-r-2 border-yellow-600`
+                : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
+            }`}
+          >
+            <span className="mr-3">📥</span>
+            Inbox
+          </Link>
         </nav>
 
         {/* Groups Section */}

@@ -16,6 +16,7 @@ const Calendar = lazy(() => import('./pages/Calendar'));
 const Inbox = lazy(() => import('./pages/Inbox'));
 const Groups = lazy(() => import('./pages/Groups'));
 const TaskFormPage = lazy(() => import('./pages/TaskFormPage'));
+const Review = lazy(() => import('./pages/Review'));
 const RouteTestPage = lazy(() => import('./pages/RouteTestPage'));
 const PromptTestPage = lazy(() => import('./pages/PromptTestPage'));
 
@@ -117,6 +118,12 @@ function HomePage() {
                     className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
                   >
                     Groups
+                  </a>
+                  <a
+                    href="/review"
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-block"
+                  >
+                    Review
                   </a>
                 </div>
               </div>
@@ -246,6 +253,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Groups />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/review" 
+                element={
+                  <ProtectedRoute>
+                    <Review />
                   </ProtectedRoute>
                 } 
               />

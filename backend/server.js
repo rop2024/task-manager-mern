@@ -23,6 +23,13 @@ import {
 // Initialize dotenv
 dotenv.config();
 
+// Define allowed origins for CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:3000"
+].filter(Boolean);
+
 // Import models - order matters to resolve circular dependencies
 import './models/User.js';
 import './models/Group.js';
@@ -40,6 +47,7 @@ import calendarRoutes from './routes/calendar.js';
 import completedRoutes from './routes/completed.js';
 import inboxRoutes from './routes/inbox.js'; // NEW: Import inbox routes
 import draftsRoutes from './routes/drafts.js'; // NEW: Import drafts routes
+import reviewRoutes from './routes/review.js'; // NEW: Import review routes
 import { startReminderScheduler } from './middleware/reminders.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 
@@ -52,7 +60,16 @@ const securityConfig = getSecurityConfig();
 // Enhanced security middleware
 app.use(securityLogger); // Log security events
 app.use(securityMonitor); // Monitor suspicious activities
-app.use(cors(corsOptions)); // Secure CORS configuration
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+})); // Secure CORS configuration
 app.use(securityHeaders); // Enhanced security headers
 
 // Logging configuration based on environment
@@ -94,6 +111,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/completed', completedRoutes);
 app.use('/api/inbox', inboxRoutes);
 app.use('/api/drafts', draftsRoutes);
+app.use('/api/review', reviewRoutes);
 
 // Enhanced test routes
 app.get('/', (req, res) => res.json({
@@ -123,17 +141,12 @@ app.get('/api/hello', async (req, res) => {
   }
 });
 
-app.get('/api/health', (req, res) => res.json({
-  status: 'OK',
-  database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-  timestamp: new Date().toISOString(),
-  version: '2.0.0',
-  environment: process.env.NODE_ENV,
-  cors: {
-    allowedOrigins: allowedOrigins.length,
-    frontendUrl: process.env.FRONTEND_URL
-  }
-}));
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // CORS pre-flight for all routes
 app.options('*', cors());

@@ -483,7 +483,19 @@ router.get('/', protect, [
   query('status')
     .optional()
     .isIn(['draft', 'pending', 'in-progress', 'completed', 'all'])
-    .withMessage('Status must be draft, pending, in-progress, completed, or all')
+    .withMessage('Status must be draft, pending, in-progress, completed, or all'),
+  query('completed')
+    .optional()
+    .isBoolean()
+    .withMessage('completed must be a boolean'),
+  query('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('startDate must be a valid date'),
+  query('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('endDate must be a valid date')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -503,6 +515,9 @@ router.get('/', protect, [
       includeCompleted = false,
       includeDrafts = false,
       quickCapture,
+      completed,
+      startDate,
+      endDate,
       page = 1, 
       limit = 50, 
       sortBy = 'createdAt', 
@@ -512,13 +527,26 @@ router.get('/', protect, [
     // Build filter object
     const filter = { user: req.user.id };
     
+    // Handle completion status filtering
+    if (completed !== undefined) {
+      filter.isCompleted = completed === 'true';
+    }
+    
+    // Handle date range filtering for completed tasks
+    if (startDate && endDate && (completed === 'true' || includeCompleted)) {
+      filter.completedAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
     // Handle status filtering with draft logic
     if (status && status !== 'all') {
       filter.status = status;
     } else {
       // Build exclusion array
       const excludeStatuses = [];
-      if (!includeCompleted) excludeStatuses.push('completed');
+      if (!includeCompleted && completed !== 'true') excludeStatuses.push('completed');
       if (!includeDrafts) excludeStatuses.push('draft');
       
       if (excludeStatuses.length > 0) {
