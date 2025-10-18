@@ -26,8 +26,11 @@ dotenv.config();
 // Define allowed origins for CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  process.env.VERCEL_URL, // Add support for Vercel deployment
   "http://localhost:5173",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  // Allow any vercel.app subdomain in production
+  ...(process.env.NODE_ENV === 'production' ? [] : [])
 ].filter(Boolean);
 
 // Import models - order matters to resolve circular dependencies
@@ -62,11 +65,21 @@ app.use(securityLogger); // Log security events
 app.use(securityMonitor); // Monitor suspicious activities
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+    
+    // In production, allow any vercel.app domain
+    if (process.env.NODE_ENV === 'production' && origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Otherwise reject
+    callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
 })); // Secure CORS configuration
