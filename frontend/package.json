@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "rm -rf node_modules package-lock.json && npm install",
+    "prebuild": "npm run clean && npm install",
+    "clean": "node -e \"const fs = require('fs'); try { fs.rmSync('node_modules', {recursive: true, force: true}); fs.unlinkSync('package-lock.json'); } catch(e) {}\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
