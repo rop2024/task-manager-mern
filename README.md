@@ -49,7 +49,6 @@ A **full-stack task management application** built with **React, Node.js, Expres
 
 **Frontend:** React 18, Tailwind CSS, React Router, Axios, React Big Calendar
 **Backend:** Node.js, Express.js, MongoDB, Mongoose, JWT, bcryptjs
-**Deployment:** Vercel (frontend), Render/Railway (backend), MongoDB Atlas
 
 ---
 

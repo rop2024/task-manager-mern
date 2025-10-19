@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    // Remove proxy when using external backend (Render)
+    // Development proxy (uncomment if needed)
     // proxy: {
     //   '/api': {
     //     target: 'http://localhost:5001',

@@ -7,7 +7,7 @@ const ConnectionDebug = () => {
 
   useEffect(() => {
     const checkConnection = async () => {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       setApiUrl(baseURL);
       
       try {
