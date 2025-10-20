@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoutes';
-import ConnectionDebug from './components/debug/ConnectionDebug';
 import './index.css';
 
 // Lazy load page components to reduce initial bundle size
@@ -211,7 +210,6 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
-          <ConnectionDebug />
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
