@@ -5,8 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run clean && npm install",
-    "clean": "node -e \"const fs = require('fs'); try { fs.rmSync('node_modules', {recursive: true, force: true}); fs.unlinkSync('package-lock.json'); } catch(e) {}\"",
     "build": "vite build",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -30,6 +28,9 @@
     "vite": "5.3.3",
     "react-big-calendar": "^1.9.0",
     "moment": "^2.29.4"
+  },
+  "resolutions": {
+    "rollup": "4.21.0"
   },
   "keywords": [
     "react",
