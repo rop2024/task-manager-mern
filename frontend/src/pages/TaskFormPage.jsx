@@ -172,9 +172,9 @@ const TaskFormPage = () => {
     <ErrorBoundary>
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {/* Header */}
-        <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6 py-4`}>
+        <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-4 sm:px-6 py-4`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={handleCancel}
                 className={`p-2 rounded-lg transition-colors ${
@@ -188,7 +188,7 @@ const TaskFormPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}> 
+              <h1 className={`text-xl sm:text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}> 
                 {taskId ? 'Edit Task' : 'New Task'}
               </h1>
             </div>
@@ -197,35 +197,35 @@ const TaskFormPage = () => {
 
         {/* Success message */}
         {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 mx-6 mt-4 rounded text-center text-lg font-semibold">
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 mx-4 sm:mx-6 mt-4 rounded text-center text-base sm:text-lg font-semibold">
             {successMessage}
           </div>
         )}
 
         {/* Error display */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mx-6 mt-2 rounded">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 mx-4 sm:mx-6 mt-2 rounded">
             <strong className="font-bold">Error: </strong>
             <span className="block sm:inline">{error}</span>
           </div>
         )}
 
         {/* Main Content */}
-        <main className="flex-1 flex">
+        <main className="flex-1 flex flex-col lg:flex-row">
           {/* For new tasks, show both drafts and form */}
           {!taskId ? (
             <>
-              {/* Draft Inbox - Left Half */}
-              <div className={`w-1/2 ${isDark ? 'bg-gray-800' : 'bg-white'} border-r ${isDark ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+              {/* Draft Inbox - Top on mobile, Left on desktop */}
+              <div className={`lg:w-1/2 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b lg:border-b-0 lg:border-r ${isDark ? 'border-gray-700' : 'border-gray-200'} flex flex-col`}>
+                <div className="p-4 sm:p-6 border-b border-gray-200">
+                  <h2 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
                     Draft Inbox
                   </h2>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     Quick ideas waiting to become tasks
                   </p>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto min-h-48 lg:min-h-0">
                   <DraftsList
                     onDraftPromoted={handleDraftPromoted}
                     showInSidebar={true}
@@ -233,17 +233,17 @@ const TaskFormPage = () => {
                 </div>
               </div>
 
-              {/* Task Form - Right Half */}
-              <div className="w-1/2 flex flex-col">
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+              {/* Task Form - Bottom on mobile, Right on desktop */}
+              <div className="lg:w-1/2 flex flex-col">
+                <div className="p-4 sm:p-6 border-b border-gray-200">
+                  <h2 className={`text-base sm:text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
                     New Task
                   </h2>
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     Create a detailed task with all information
                   </p>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                   <TaskForm
                     task={task}
                     draft={draftData}
@@ -258,7 +258,7 @@ const TaskFormPage = () => {
             </>
           ) : (
             /* For editing tasks, show only the form */
-            <div className="flex-1 container mx-auto px-6 py-8 max-w-4xl">
+            <div className="flex-1 container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-4xl">
               <TaskForm
                 task={task}
                 draft={draftData}

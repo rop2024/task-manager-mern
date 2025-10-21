@@ -155,31 +155,31 @@ const TaskList = ({
   return (
     <div className="space-y-6">
       {/* Task List Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           {/* Task Statistics */}
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-2 sm:gap-4">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs sm:text-sm text-gray-600">
                 All: <span className="font-semibold text-gray-800">{tasks.length}</span>
               </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs sm:text-sm text-gray-600">
                 Active: <span className="font-semibold text-blue-600">{activeTasks.length}</span>
               </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs sm:text-sm text-gray-600">
                 Completed: <span className="font-semibold text-green-600">{completedTasks.length}</span>
               </span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
+              <span className="text-xs sm:text-sm text-gray-600">
                 Drafts: <span className="font-semibold text-yellow-600">{draftTasks.length}</span>
               </span>
             </div>

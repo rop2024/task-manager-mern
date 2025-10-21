@@ -92,7 +92,7 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
   const isCompleted = task.status === 'completed';
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-3 border-l-4 ${
+    <div className={`bg-white rounded-lg border border-gray-200 p-3 sm:p-4 border-l-4 ${
       task.isImportant ? 'border-l-red-500' : 
       isDraft ? 'border-l-yellow-500' : 
       task.status === 'completed' ? 'border-l-green-500' :
@@ -110,7 +110,7 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
             <button
               onClick={handleQuickComplete}
               disabled={isUpdating}
-              className={`flex-shrink-0 w-5 h-5 rounded-full border-2 transition-colors ${
+              className={`flex-shrink-0 w-6 h-6 sm:w-5 sm:h-5 rounded-full border-2 transition-colors ${
                 task.status === 'completed'
                   ? 'bg-green-500 border-green-500'
                   : 'border-gray-300 hover:border-green-500'
@@ -118,14 +118,14 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
               title={task.status === 'completed' ? 'Mark as pending' : 'Mark as completed'}
             >
               {task.status === 'completed' && (
-                <svg className="w-3 h-3 text-white mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-3 sm:h-3 text-white mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               )}
             </button>
           ) : (
-            <div className="flex-shrink-0 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex-shrink-0 w-6 h-6 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center">
+              <svg className="w-3 h-3 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </div>
@@ -134,13 +134,11 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
           {/* Title and meta */}
           <div className="flex-1 min-w-0 cursor-pointer" onClick={handleEdit}>
             <div className="flex items-center space-x-2">
-              <h3 className={`font-medium text-gray-900 truncate ${
+            <h3 className={`font-medium text-sm sm:text-base text-gray-900 ${
                 task.status === 'completed' ? 'line-through text-gray-500' : ''
               }`}>
                 {task.title}
-              </h3>
-              
-              {/* Compact indicators */}
+            </h3>              {/* Compact indicators */}
               {task.priority === 'high' && (
                 <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full" title="High Priority"></div>
               )}
@@ -164,13 +162,13 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center space-x-2 flex-shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {/* Quick status toggle for non-completed tasks */}
           {!isDraft && task.status !== 'completed' && (
             <button
               onClick={() => handleStatusChange(task.status === 'in-progress' ? 'pending' : 'in-progress')}
               disabled={isUpdating}
-              className={`p-1 rounded transition-colors ${
+              className={`p-2 sm:p-1 rounded transition-colors ${
                 task.status === 'in-progress' 
                   ? 'bg-blue-100 text-blue-600' 
                   : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
@@ -187,7 +185,7 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
           <div className="relative">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded"
+              className="p-2 sm:p-1 text-gray-400 hover:text-gray-600 rounded"
               title="More actions"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

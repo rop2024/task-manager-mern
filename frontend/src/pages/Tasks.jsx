@@ -34,6 +34,22 @@ const TasksPage = () => {
     const saved = localStorage.getItem('sidebarVisible');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Check if we're on mobile
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [activeTab, setActiveTab] = useState('active'); // 'active', 'completed'
   const [filters, setFilters] = useState({
     status: '',
@@ -283,8 +299,8 @@ const TasksPage = () => {
   return (
     <TaskProvider>
       <div className={`flex h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        {/* Sidebar */}
-        {sidebarVisible && (
+        {/* Desktop Sidebar */}
+        {!isMobile && sidebarVisible && (
           <div className="w-64 transition-all duration-300 ease-in-out border-r border-gray-200">
             <Sidebar
               groups={groups}
@@ -293,14 +309,29 @@ const TasksPage = () => {
               selectedGroup={selectedGroup}
               onGroupSelect={setSelectedGroup}
               onGroupDeleted={fetchGroups}
+              isMobileOpen={false}
             />
           </div>
         )}
 
+        {/* Mobile Sidebar */}
+        {isMobile && (
+          <Sidebar
+            groups={groups}
+            onGroupCreate={handleCreateGroup}
+            onGroupEdit={setEditingGroup}
+            selectedGroup={selectedGroup}
+            onGroupSelect={setSelectedGroup}
+            onGroupDeleted={fetchGroups}
+            isMobileOpen={isMobileMenuOpen}
+            onMobileClose={() => setIsMobileMenuOpen(false)}
+          />
+        )}
 
 
-        {/* Fixed Sidebar Toggle (visible only when sidebar is hidden) */}
-        {!sidebarVisible && (
+
+        {/* Fixed Sidebar Toggle (visible only when sidebar is hidden on desktop) */}
+        {!isMobile && !sidebarVisible && (
           <button
             onClick={() => {
               setSidebarVisible(true);
@@ -320,23 +351,36 @@ const TasksPage = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <header className={`flex-shrink-0 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6 py-4`}>
+          <header className={`flex-shrink-0 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-4 lg:px-6 py-4`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                {/* Sidebar Toggle Button */}
-                <button 
-                  onClick={() => {
-                    const newValue = !sidebarVisible;
-                    setSidebarVisible(newValue);
-                    localStorage.setItem('sidebarVisible', JSON.stringify(newValue));
-                  }}
-                  className={`mr-4 p-2 rounded-lg transition-colors flex items-center justify-center
-                    ${isDark 
-                      ? sidebarVisible 
-                        ? 'bg-blue-900 text-blue-300 border border-blue-800' 
-                        : 'border border-gray-700 text-gray-300 hover:bg-gray-800' 
-                      : sidebarVisible 
-                        ? 'bg-blue-50 text-blue-600 border border-blue-200' 
+                {/* Mobile Hamburger Menu */}
+                {isMobile ? (
+                  <button 
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className={`mr-4 p-2 rounded-lg transition-colors flex items-center justify-center
+                      ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                    aria-label="Open Menu"
+                  >
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                ) : (
+                  /* Desktop Sidebar Toggle Button */
+                  <button 
+                    onClick={() => {
+                      const newValue = !sidebarVisible;
+                      setSidebarVisible(newValue);
+                      localStorage.setItem('sidebarVisible', JSON.stringify(newValue));
+                    }}
+                    className={`mr-4 p-2 rounded-lg transition-colors flex items-center justify-center
+                      ${isDark 
+                        ? sidebarVisible 
+                          ? 'bg-blue-900 text-blue-300 border border-blue-800' 
+                          : 'border border-gray-700 text-gray-300 hover:bg-gray-800' 
+                        : sidebarVisible 
+                          ? 'bg-blue-50 text-blue-600 border border-blue-200' 
                         : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
                     }`}
                   aria-label={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
@@ -351,6 +395,7 @@ const TasksPage = () => {
                     <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                   </svg>
                 </button>
+                )}
                 
                 <div>
                   <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>

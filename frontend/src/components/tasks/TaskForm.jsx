@@ -757,13 +757,13 @@ const TaskForm = ({
         </div>
 
         <div className="flex items-center">
-          <label className="flex items-center space-x-3 cursor-pointer">
+          <label className="flex items-center space-x-3 cursor-pointer p-2">
             <input
               type="checkbox"
               name="isImportant"
               checked={formData.isImportant}
               onChange={handleChange}
-              className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              className="w-6 h-6 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
             />
             <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               Mark as Important
@@ -773,11 +773,11 @@ const TaskForm = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-4 border-t border-gray-200">
         <button
           type="button"
           onClick={onCancel}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+          className={`w-full sm:w-auto px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
             isDark
               ? 'text-gray-300 bg-gray-700 hover:bg-gray-600 border border-gray-600'
               : 'text-gray-700 bg-white hover:bg-gray-50 border border-gray-300'
@@ -789,7 +789,7 @@ const TaskForm = ({
           type="button"
           onClick={handleTaskSubmit}
           disabled={!formData.title.trim() || !formData.group || isSaving}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center space-x-2"
+          className="w-full sm:w-auto px-6 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center space-x-2"
         >
           {isSaving && (
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />

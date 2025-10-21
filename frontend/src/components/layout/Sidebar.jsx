@@ -5,7 +5,7 @@ import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../../context/ThemeContext';
 import axios from 'axios';
 
-const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSelect, onGroupDeleted }) => {
+const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSelect, onGroupDeleted, isMobileOpen, onMobileClose }) => {
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState(null);
@@ -60,8 +60,28 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
 
   const isTasksPage = location.pathname === '/tasks';
 
+  const handleLinkClick = () => {
+    if (onMobileClose) onMobileClose();
+  };
+
   return (
-    <div className={`w-64 ${isDark ? 'bg-gray-800 text-white' : 'bg-white'} shadow-lg h-screen fixed left-0 top-0 overflow-y-auto`}>
+    <>
+      {/* Mobile backdrop */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onMobileClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        ${isDark ? 'bg-gray-800 text-white' : 'bg-white'} 
+        shadow-lg h-screen fixed left-0 top-0 overflow-y-auto z-50
+        transition-transform duration-300 ease-in-out
+        w-64
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
@@ -81,7 +101,10 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
                 ? `${isDark ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'} border-r-2 border-blue-600`
                 : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
             }`}
-            onClick={() => onGroupSelect(null)}
+            onClick={() => {
+              onGroupSelect(null);
+              handleLinkClick();
+            }}
           >
             <span className="mr-3">📋</span>
             All Tasks
@@ -94,6 +117,7 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
                 ? `${isDark ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700'} border-r-2 border-green-600`
                 : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
             }`}
+            onClick={handleLinkClick}
           >
             <span className="mr-3">📈</span>
             Dashboard
@@ -106,6 +130,7 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
                 ? `${isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700'} border-r-2 border-purple-600`
                 : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
             }`}
+            onClick={handleLinkClick}
           >
             <span className="mr-3">📅</span>
             Calendar
@@ -119,6 +144,7 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
                   ? `${isDark ? 'bg-yellow-900 text-yellow-300' : 'bg-yellow-100 text-yellow-700'} border-r-2 border-yellow-600`
                   : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`
               }`}
+              onClick={handleLinkClick}
             >
               <span className="mr-3">📥</span>
               Inbox
@@ -147,7 +173,10 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
             {groups.map(group => (
               <button
                 key={group._id}
-                onClick={() => onGroupSelect(group)}
+                onClick={() => {
+                  onGroupSelect(group);
+                  handleLinkClick();
+                }}
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-lg transition-colors text-left group ${
                   selectedGroup?._id === group._id
                     ? `${isDark ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'} border-r-2 border-blue-600`
@@ -266,6 +295,7 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
         </div>
       )}
     </div>
+    </>
   );
 };
 
