@@ -207,7 +207,7 @@ const TaskForm = ({
     try {
       const taskData = {
         title: formData.title,
-        notes: formData.notes,
+        description: formData.notes, // Backend expects 'description' not 'notes'
         priority: formData.priority,
         group: formData.group,
         isImportant: formData.isImportant

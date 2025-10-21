@@ -25,6 +25,9 @@ const TasksPage = () => {
   const [loading, setLoading] = useState(true);
   const [editingGroup, setEditingGroup] = useState(null);
   const [showCompletedPanel, setShowCompletedPanel] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskFormErrors, setTaskFormErrors] = useState({});
+  const [formSubmissionKey, setFormSubmissionKey] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(() => {
     const saved = localStorage.getItem('sidebarVisible');
     return saved !== null ? JSON.parse(saved) : true;

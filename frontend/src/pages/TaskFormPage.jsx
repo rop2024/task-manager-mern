@@ -113,23 +113,27 @@ const TaskFormPage = () => {
     loadData();
   }, [taskId]);
 
+  const [successMessage, setSuccessMessage] = useState("");
   const handleSave = async (taskData) => {
     try {
       if (taskId) {
         // Update existing task
         await axios.put(`/api/tasks/${taskId}`, taskData);
+        setSuccessMessage("Task updated successfully!");
       } else {
         // Create new task
         await axios.post('/api/tasks', taskData);
+        setSuccessMessage("Task created successfully!");
       }
-      
-      // Navigate back to tasks page
-      navigate('/tasks', { 
-        state: { 
-          message: taskId ? 'Task updated successfully' : 'Task created successfully',
-          groupId: taskData.group 
-        }
-      });
+      // Show message, then redirect
+      setTimeout(() => {
+        navigate('/tasks', { 
+          state: { 
+            message: taskId ? 'Task updated successfully' : 'Task created successfully',
+            groupId: taskData.group 
+          }
+        });
+      }, 1500);
     } catch (error) {
       console.error('Error saving task:', error);
       throw error; // Let TaskForm handle the error
@@ -162,7 +166,7 @@ const TaskFormPage = () => {
 
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>        
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         {/* Header */}
         <header className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'} px-6 py-4`}>
           <div className="flex items-center justify-between">
@@ -180,12 +184,19 @@ const TaskFormPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}> 
                 {taskId ? 'Edit Task' : 'New Task'}
               </h1>
             </div>
           </div>
         </header>
+
+        {/* Success message */}
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 mx-6 mt-4 rounded text-center text-lg font-semibold">
+            {successMessage}
+          </div>
+        )}
 
         {/* Error display */}
         {error && (

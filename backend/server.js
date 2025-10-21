@@ -29,6 +29,7 @@ const allowedOrigins = [
   process.env.VERCEL_URL, // Add support for Vercel deployment
   "http://localhost:5173",
   "http://localhost:3000",
+  "http://localhost:3001",
   // Allow any vercel.app subdomain in production
   ...(process.env.NODE_ENV === 'production' ? [] : [])
 ].filter(Boolean);
