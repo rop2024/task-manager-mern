@@ -2,8 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/layout/ThemeToggle';
+import usePageTitle from '../hooks/usePageTitle';
 
 const LandingPage = () => {
+  usePageTitle('Welcome');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 

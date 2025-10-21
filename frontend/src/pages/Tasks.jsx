@@ -5,6 +5,7 @@ import { TaskProvider } from '../context/TaskContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Sidebar from '../components/layout/Sidebar';
+import usePageTitle from '../hooks/usePageTitle';
 import TaskForm from '../components/tasks/TaskForm';
 import TaskList from '../components/tasks/TaskList';
 import TaskItem from '../components/tasks/TaskItem';
@@ -14,6 +15,7 @@ import CompletedTasksPanel from '../components/tasks/CompletedTasksPanel';
 import FloatingAddButton from '../components/ui/FloatingAddButton';
 
 const TasksPage = () => {
+  usePageTitle('Tasks');
   const { user } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();

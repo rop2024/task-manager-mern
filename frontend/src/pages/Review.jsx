@@ -4,8 +4,10 @@ import { useTheme } from '../context/ThemeContext';
 import WeeklyStats from '../components/review/WeeklyStats';
 import CompletedTasksReview from '../components/review/CompletedTasksReview';
 import axios from 'axios';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Review = () => {
+  usePageTitle('Review');
   const { user } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';

@@ -4,8 +4,10 @@ import axios from 'axios';
 import CalendarView from '../components/calendar/CalendarView';
 import RemindersList from '../components/calendar/RemindersList';
 import CalendarTaskForm from '../components/calendar/CalendarTaskForm';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Calendar = () => {
+  usePageTitle('Calendar');
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [reminders, setReminders] = useState([]);

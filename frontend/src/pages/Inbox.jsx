@@ -4,8 +4,10 @@ import axios from 'axios';
 import QuickAddInput from '../components/inbox/QuickAddInput';
 import InboxItem from '../components/inbox/InboxItem';
 import InboxStats from '../components/inbox/InboxStats';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Inbox = () => {
+  usePageTitle('Inbox');
   const { user } = useAuth();
   const [inboxItems, setInboxItems] = useState([]);
   const [loading, setLoading] = useState(true);

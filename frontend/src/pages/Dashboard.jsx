@@ -3,8 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import StatsOverview from '../components/scoreboard/StatsOverview';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Dashboard = () => {
+  usePageTitle('Dashboard');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);

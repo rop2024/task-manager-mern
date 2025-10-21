@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import TaskForm from '../components/tasks/TaskForm';
 import DraftsList from '../components/tasks/DraftsList';
 import axios from 'axios';
+import usePageTitle from '../hooks/usePageTitle';
 
 // Error boundary component for catching errors
 class ErrorBoundary extends React.Component {
@@ -60,6 +61,9 @@ const TaskFormPage = () => {
   const { taskId } = useParams();
   const location = useLocation();
   const isDark = theme === 'dark';
+  
+  // Set dynamic page title based on whether we're editing or creating
+  usePageTitle(taskId ? 'Edit Task' : 'New Task');
   
   const [groups, setGroups] = useState([]);
   const [task, setTask] = useState(null);

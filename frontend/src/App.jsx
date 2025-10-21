@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoutes';
+import usePageTitle from './hooks/usePageTitle';
 import './index.css';
 
 // Lazy load page components to reduce initial bundle size
@@ -38,6 +39,7 @@ function LoadingSpinner() {
 
 // Updated Home component with navigation
 function HomePage() {
+  usePageTitle('Home');
   const { isAuthenticated, user, loading } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';

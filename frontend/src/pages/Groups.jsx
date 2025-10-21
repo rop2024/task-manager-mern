@@ -4,8 +4,10 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../hooks/useToast';
 import axios from 'axios';
 import GroupForm from '../components/group/GroupForm';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Groups = () => {
+  usePageTitle('Groups');
   const { user } = useAuth();
   const { theme } = useTheme();
   const { addToast } = useToast();

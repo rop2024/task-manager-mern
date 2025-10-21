@@ -2,8 +2,10 @@ import React from 'react';
 import SignupForm from '../components/SignupForm';
 import ThemeToggle from '../components/layout/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Signup = () => {
+  usePageTitle('Sign Up');
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
