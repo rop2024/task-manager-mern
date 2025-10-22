@@ -825,7 +825,117 @@ GET /health
 }
 ```
 
----
+## 📥 Bulk Import Endpoints
+
+These endpoints support parsing and importing multiple tasks from Markdown (checkbox lines) or uploaded .md files. Bulk operations are limited to 50 items per request by default — configurable server-side.
+
+### Parse Markdown (no DB write)
+```http
+POST /tasks/bulk/parse
+Content-Type: text/plain
+Authorization: Bearer <token>
+```
+
+Accepts a Markdown body containing checkbox lines. Returns parsed task rows ready for preview in a client-side grid.
+
+Request body (example):
+```text
+- [ ] Buy groceries | priority:medium | group:Personal | due:2025-10-30 | tags:errands,shopping
+- [x] Submit report | priority:high | group:Work | due:2025-10-01
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "line": "- [ ] Buy groceries | priority:medium | group:Personal | due:2025-10-30 | tags:errands,shopping",
+      "parsed": {
+        "title": "Buy groceries",
+        "status": "pending",
+        "priority": "medium",
+        "group": "Personal",
+        "dueAt": "2025-10-30T00:00:00.000Z",
+        "tags": ["errands","shopping"],
+        "estimatedMinutes": null
+      },
+      "errors": []
+    },
+    {
+      "line": "- [x] Submit report | priority:high | group:Work | due:2025-10-01",
+      "parsed": {
+        "title": "Submit report",
+        "status": "completed",
+        "priority": "high",
+        "group": "Work",
+        "dueAt": "2025-10-01T00:00:00.000Z",
+        "tags": [],
+        "estimatedMinutes": null
+      },
+      "errors": []
+    }
+  ],
+  "count": 2
+}
+```
+
+### Import parsed tasks (writes to DB)
+```http
+POST /tasks/bulk/import
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+Accepts an array of task objects (as returned by /tasks/bulk/parse or edited in a client grid). Performs validation and inserts tasks via insertMany (or batched inserts). Default limit: 50 items.
+
+Request body (example):
+```json
+{
+  "tasks": [
+    {
+      "title": "Buy groceries",
+      "status": "pending",
+      "priority": "medium",
+      "group": "<groupId or groupName>",
+      "dueAt": "2025-10-30T00:00:00.000Z",
+      "tags": ["errands","shopping"],
+      "estimatedMinutes": 30
+    }
+  ]
+}
+```
+
+Response (201):
+```json
+{
+  "success": true,
+  "createdCount": 1,
+  "data": [ /* created task objects */ ],
+  "errors": [ /* per-item error objects for failures */ ]
+}
+```
+
+### Upload Markdown file (optional)
+```http
+POST /tasks/bulk/upload-file
+Content-Type: multipart/form-data
+Authorization: Bearer <token>
+```
+
+Accepts a single `.md` file upload (multipart). Server reads the file, parses checkbox lines, and returns the same response as `/tasks/bulk/parse`.
+
+Response: same shape as `/tasks/bulk/parse`.
+
+### Notes & rules
+- Input format: checklist lines in Markdown. Supported forms:
+  - `- [ ] Task title` (pending)
+  - `- [x] Done title` (completed)
+  - Inline metadata supported using pipe-separated key:value pairs after title, e.g. `| priority:high | group:Work | due:2025-10-30 | tags:tag1,tag2 | estimatedMinutes:45`
+- Target fields exposed in the grid: `title`, `description` (nullable), `status`, `priority`, `group`, `dueAt`, `tags`, `estimatedMinutes`.
+- Bulk insert behaviour: server validates each item, returns per-item errors. Max items per request: 50 (configurable). Successful items are created and returned; failures are reported alongside.
+- Validation: required `title`; `group` may be a group name (server will resolve or create default group) or an existing groupId.
+
 
 **Need Help?**
 - Check the [GitHub Repository](https://github.com/your-username/taskflow)
