@@ -192,4 +192,17 @@ router.post('/import', protect, bulkLimiter, [
   }
 });
 
+// GET job status
+router.get('/jobs/:id', protect, async (req, res) => {
+  try {
+    const job = await ImportJob.findOne({ _id: req.params.id, user: req.user.id });
+    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    res.json({ success: true, data: job });
+  } catch (error) {
+    console.error('Get job error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 export default router;
+
