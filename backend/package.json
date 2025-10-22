@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate:tasks": "node scripts/migrateTasks.js"
@@ -27,9 +27,14 @@
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.5.0",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.1",
+    "supertest": "^6.4.6",
+    "mongodb-memory-server": "^8.14.0",
+    "cross-env": "^7.0.3"
   }
 }

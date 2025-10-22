@@ -45,13 +45,13 @@ const BulkImportCard = ({ onPreview }) => {
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <div className="flex items-start justify-between">
         <h3 className="font-semibold text-lg mb-2">Bulk Import</h3>
-        <button onClick={() => setShowGuidelines(s => !s)} className="text-sm text-blue-600 hover:underline">
+        <button aria-expanded={showGuidelines} aria-controls="bulk-guidelines" onClick={() => setShowGuidelines(s => !s)} className="text-sm text-blue-600 hover:underline">
           {showGuidelines ? 'Hide guidelines' : 'Show guidelines'}
         </button>
       </div>
 
       {showGuidelines && (
-        <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded text-sm text-gray-700">
+        <div id="bulk-guidelines" role="region" aria-label="Bulk import guidelines" className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded text-sm text-gray-700">
           <strong className="block mb-1">Quick rules</strong>
           <ul className="list-disc ml-5 mb-2">
             <li>One task per line, using Markdown checkboxes: <code>- [ ] Title</code> or <code>- [x] Title</code>.</li>
@@ -77,10 +77,12 @@ const BulkImportCard = ({ onPreview }) => {
         onChange={(e) => setMarkdown(e.target.value)}
         placeholder="Paste checklist Markdown here..."
         className="w-full h-48 p-3 border rounded-lg text-sm mb-3 resize-none"
+        aria-label="Bulk markdown input"
+        spellCheck={false}
       />
 
       <div className="flex items-center space-x-3 mb-3">
-        <label className="cursor-pointer inline-flex items-center px-3 py-2 border rounded bg-gray-50 hover:bg-gray-100">
+        <label className="cursor-pointer inline-flex items-center px-3 py-2 border rounded bg-gray-50 hover:bg-gray-100" aria-label="Upload markdown file">
           <input type="file" accept=".md,text/markdown" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
           <span className="text-sm">Upload .md</span>
         </label>

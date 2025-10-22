@@ -82,25 +82,28 @@ const BulkGridEditor = ({ parsedRows, groups = [], onClose }) => {
     <div className="mt-6">
       <div className="bg-white border rounded p-3 mb-3">
         <div className="flex items-center space-x-2">
-          <select className="border p-1 rounded text-sm" value={bulk.priority} onChange={(e)=>setBulk(b=>({...b, priority: e.target.value}))}>
+          <label className="sr-only">Bulk priority</label>
+          <select aria-label="Bulk priority" className="border p-1 rounded text-sm" value={bulk.priority} onChange={(e)=>setBulk(b=>({...b, priority: e.target.value}))}>
             <option value="">Set priority...</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
           </select>
 
-          <select className="border p-1 rounded text-sm" value={bulk.group} onChange={(e)=>setBulk(b=>({...b, group: e.target.value}))}>
+          <label className="sr-only">Bulk group</label>
+          <select aria-label="Bulk group" className="border p-1 rounded text-sm" value={bulk.group} onChange={(e)=>setBulk(b=>({...b, group: e.target.value}))}>
             <option value="">Set group...</option>
             {groups.map(g=> <option key={g._id} value={g._id}>{g.name}</option>)}
           </select>
 
-          <input type="date" className="border p-1 rounded text-sm" value={bulk.dueAt} onChange={(e)=>setBulk(b=>({...b, dueAt: e.target.value}))} />
+          <label className="sr-only">Bulk due date</label>
+          <input aria-label="Bulk due date" type="date" className="border p-1 rounded text-sm" value={bulk.dueAt} onChange={(e)=>setBulk(b=>({...b, dueAt: e.target.value}))} />
 
-          <button onClick={applyBulk} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Apply to selected</button>
+          <button aria-label="Apply bulk changes to selected rows" onClick={applyBulk} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Apply to selected</button>
 
           <div className="ml-auto flex items-center space-x-2">
-            <button onClick={onClose} className="px-3 py-1 border rounded text-sm">Close</button>
-            <button onClick={handleImport} disabled={importing} className="px-3 py-1 bg-green-600 text-white rounded text-sm">{importing? 'Importing...' : 'Save to DB'}</button>
+            <button aria-label="Close editor" onClick={onClose} className="px-3 py-1 border rounded text-sm">Close</button>
+            <button aria-label="Save rows to database" onClick={handleImport} disabled={importing} className="px-3 py-1 bg-green-600 text-white rounded text-sm">{importing? 'Importing...' : 'Save to DB'}</button>
           </div>
         </div>
       </div>
@@ -123,10 +126,11 @@ const BulkGridEditor = ({ parsedRows, groups = [], onClose }) => {
           <tbody>
             {rows.map((r, i) => (
               <tr key={i} className={`${selected.has(i)? 'bg-blue-50': ''}`}>
-                <td className="p-2 text-center"><input type="checkbox" checked={selected.has(i)} onChange={()=>toggleSelect(i)} /></td>
-                <td className="p-2"><input className="w-full border p-1 rounded text-sm" value={r.title} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, title: e.target.value} : x))} /></td>
+                <td className="p-2 text-center"><input aria-label={`Select row ${i+1}`} type="checkbox" checked={selected.has(i)} onChange={()=>toggleSelect(i)} /></td>
+                <td className="p-2"><input aria-label={`Title row ${i+1}`} className="w-full border p-1 rounded text-sm" value={r.title} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, title: e.target.value} : x))} /></td>
                 <td className="p-2">
-                  <select className="border p-1 rounded text-sm" value={r.status} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, status: e.target.value} : x))}>
+                  <label className="sr-only">Status</label>
+                  <select aria-label={`Status row ${i+1}`} className="border p-1 rounded text-sm" value={r.status} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, status: e.target.value} : x))}>
                     <option value="draft">draft</option>
                     <option value="pending">pending</option>
                     <option value="in-progress">in-progress</option>
@@ -134,21 +138,23 @@ const BulkGridEditor = ({ parsedRows, groups = [], onClose }) => {
                   </select>
                 </td>
                 <td className="p-2">
-                  <select className="border p-1 rounded text-sm" value={r.priority} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, priority: e.target.value} : x))}>
+                  <label className="sr-only">Priority</label>
+                  <select aria-label={`Priority row ${i+1}`} className="border p-1 rounded text-sm" value={r.priority} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, priority: e.target.value} : x))}>
                     <option value="low">low</option>
                     <option value="medium">medium</option>
                     <option value="high">high</option>
                   </select>
                 </td>
                 <td className="p-2">
-                  <select className="border p-1 rounded text-sm" value={r.group || ''} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, group: e.target.value} : x))}>
+                  <label className="sr-only">Group</label>
+                  <select aria-label={`Group row ${i+1}`} className="border p-1 rounded text-sm" value={r.group || ''} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, group: e.target.value} : x))}>
                     <option value="">(default)</option>
                     {groups.map(g=> <option key={g._id} value={g._id}>{g.name}</option>)}
                   </select>
                 </td>
-                <td className="p-2"><input type="date" className="border p-1 rounded text-sm" value={r.dueAt || ''} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, dueAt: e.target.value} : x))} /></td>
-                <td className="p-2"><TagInput value={r.tags} onChange={(tags)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, tags} : x))} /></td>
-                <td className="p-2"><input type="number" min="0" className="border p-1 rounded text-sm w-20" value={r.estimatedMinutes || ''} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, estimatedMinutes: e.target.value} : x))} /></td>
+                <td className="p-2"><input aria-label={`Due date row ${i+1}`} type="date" className="border p-1 rounded text-sm" value={r.dueAt || ''} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, dueAt: e.target.value} : x))} /></td>
+                <td className="p-2"><TagInput aria-label={`Tags row ${i+1}`} value={r.tags} onChange={(tags)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, tags} : x))} /></td>
+                <td className="p-2"><input aria-label={`Estimated minutes row ${i+1}`} type="number" min="0" className="border p-1 rounded text-sm w-20" value={r.estimatedMinutes || ''} onChange={(e)=> setRows(prev=> prev.map((x,idx)=> idx===i? {...x, estimatedMinutes: e.target.value} : x))} /></td>
                 <td className="p-2 text-xs text-yellow-700">{r.warnings?.length>0 ? r.warnings.join(', ') : '-'}</td>
               </tr>
             ))}

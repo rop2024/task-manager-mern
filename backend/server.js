@@ -251,5 +251,10 @@ const startServer = () => {
     });
   }
 };
+// Start the server when run directly
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
-startServer();
+// Export app and startServer for tests
+export { app, startServer };
