@@ -101,3 +101,36 @@ Next steps (implementation guidance)
 
 Created: 2025-10-22
 Author: spec generator
+
+Guidelines — what works and what doesn't
+---------------------------------------
+The goal of these rules is to make bulk imports predictable, easy to preview, and to minimize unexpected creations.
+
+What to import (recommended):
+- Short checklist lines in Markdown (one task per line) using `- [ ]` for pending or `- [x]` for completed.
+- Inline metadata using pipe-separated key:value pairs after the title, for example:
+  - `- [ ] Buy groceries | priority:medium | group:Personal | due:2025-10-30 | tags:errands,shopping | estimatedMinutes:30`
+- Use ISO dates (`YYYY-MM-DD`) for due dates — time parts are allowed (ISO 8601).
+- Provide `group` as an existing group name (recommended) or group id. If omitted, the user's default group will be used.
+
+What NOT to import (avoid or handle with care):
+- Long multi-line descriptions embedded inside a checklist line. The parser treats each checklist as one line; long descriptions should be added after import in the editor.
+- Complex, nested Markdown (task lists inside blockquotes, code blocks) — the parser only extracts top-level checklist lines.
+- Non-checklist lines (plain paragraphs) — these will be ignored or flagged as warnings.
+- Extremely large files (tens of thousands of lines) — split into smaller batches. Server defaults to a CHUNK_SIZE of 50 and will reject extremely large payloads (413) — chunk client-side if needed.
+
+Best practices
+- Paste small-to-medium batches (recommended 1–50 tasks) and use the preview grid to correct metadata before importing.
+- Use simple, consistent metadata keys: `priority`, `group`, `due` or `dueAt`, `tags`, `estimatedMinutes`, `description`.
+- Prefer group names you already have in the app. If a group name doesn't match an existing group, the import will assign the user's default group (unless configured to auto-create groups).
+- Check the preview for per-line warnings before importing. The backend will return per-item errors for validation failures.
+
+Sample inputs
+- Minimal:
+  - `- [ ] Read book`
+- With metadata:
+  - `- [x] Submit taxes | priority:high | group:Finance | due:2025-04-15 | tags:taxes,urgent | estimatedMinutes:120`
+
+Failure handling
+- The server will attempt to insert items in chunks and continue on per-item errors. You will receive a jobId and per-item errors so you can retry failing rows after fixing them in the UI.
+

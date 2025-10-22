@@ -6,6 +6,7 @@ const BulkImportCard = ({ onPreview }) => {
   const [fileName, setFileName] = useState('');
   const [parsing, setParsing] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [showGuidelines, setShowGuidelines] = useState(false);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -42,7 +43,34 @@ const BulkImportCard = ({ onPreview }) => {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <h3 className="font-semibold text-lg mb-2">Bulk Import</h3>
+      <div className="flex items-start justify-between">
+        <h3 className="font-semibold text-lg mb-2">Bulk Import</h3>
+        <button onClick={() => setShowGuidelines(s => !s)} className="text-sm text-blue-600 hover:underline">
+          {showGuidelines ? 'Hide guidelines' : 'Show guidelines'}
+        </button>
+      </div>
+
+      {showGuidelines && (
+        <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded text-sm text-gray-700">
+          <strong className="block mb-1">Quick rules</strong>
+          <ul className="list-disc ml-5 mb-2">
+            <li>One task per line, using Markdown checkboxes: <code>- [ ] Title</code> or <code>- [x] Title</code>.</li>
+            <li>Optional inline metadata after the title using pipes: <code>| priority:high | group:Work | due:2025-10-30 | tags:one,two</code>.</li>
+            <li>Use ISO dates (YYYY-MM-DD) for due dates. Tags are comma-separated.</li>
+            <li>Max recommended per request: 50 items. Large files should be split into multiple batches.</li>
+          </ul>
+          <strong className="block mb-1">Examples</strong>
+          <div className="text-xs mb-2">
+            <code>- [ ] Buy groceries | priority:medium | group:Personal | due:2025-10-30 | tags:errands,shopping | estimatedMinutes:30</code>
+          </div>
+          <strong className="block">Troubleshooting</strong>
+          <ul className="list-disc ml-5 mt-1">
+            <li>Lines without a checkbox will be ignored or flagged.</li>
+            <li>If a group name isn't found, tasks will be assigned to your default group.</li>
+            <li>Import returns per-row errors so you can fix and retry failing rows.</li>
+          </ul>
+        </div>
+      )}
 
       <textarea
         value={markdown}
