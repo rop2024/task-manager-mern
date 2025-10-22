@@ -20,6 +20,7 @@ const TaskFormPage = lazy(() => import('./pages/TaskFormPage'));
 const Review = lazy(() => import('./pages/Review'));
 const RouteTestPage = lazy(() => import('./pages/RouteTestPage'));
 const PromptTestPage = lazy(() => import('./pages/PromptTestPage'));
+const BulkImportPage = lazy(() => import('./pages/BulkImportPage'));
 
 
 // Loading component for lazy-loaded routes
@@ -233,6 +234,14 @@ function App() {
                     <Tasks />
                   </ProtectedRoute>
                 } 
+              />
+              <Route 
+                path="/bulk-import"
+                element={
+                  <ProtectedRoute>
+                    <BulkImportPage />
+                  </ProtectedRoute>
+                }
               />
               <Route 
                 path="/calendar" 
