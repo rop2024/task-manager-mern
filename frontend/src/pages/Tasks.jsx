@@ -424,6 +424,17 @@ const TasksPage = () => {
                     <span>📊 Review</span>
                   </button>
 
+                  <button
+                    onClick={() => navigate('/bulk-import')}
+                    className={`px-4 py-2 rounded-lg font-medium border transition-colors duration-200 hidden md:inline-flex items-center space-x-2 ${{isDark} ? 'border-gray-700 text-gray-300 hover:bg-gray-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                    title="Bulk Import"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20v-6m0 0V4m0 10l-3-3m3 3l3-3" />
+                    </svg>
+                    <span>Import</span>
+                  </button>
+
                   {selectedGroup ? (
                     <button
                       onClick={() => navigate('/tasks/new', { 
