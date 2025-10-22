@@ -19,3 +19,13 @@ export const authLimiter = rateLimit({
     message: 'Too many authentication attempts, please try again later.'
   }
 });
+
+// Bulk operations limiter - stricter
+export const bulkLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 bulk requests per windowMs
+  message: {
+    success: false,
+    message: 'Too many bulk requests, please try again later.'
+  }
+});

@@ -11,6 +11,10 @@ const router = express.Router();
 import quickTasksRouter from './tasks/quick.js';
 router.use('/quick', quickTasksRouter);
 
+// Import bulk import routes
+import bulkImportRouter from './tasks/bulkImport.js';
+router.use('/bulk', bulkImportRouter);
+
 // Input validation rules
 const createTaskValidation = [
   body('title')
