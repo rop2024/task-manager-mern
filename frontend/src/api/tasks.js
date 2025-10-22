@@ -19,3 +19,8 @@ export const getTasksWithDrafts = () =>
 // Get only draft tasks
 export const getDraftTasks = () => 
   getTasks({ status: 'draft' });
+
+// Bulk endpoints
+export const parseBulk = (markdown) => axios.post('/api/tasks/bulk/parse', { markdown });
+export const uploadBulkFile = (formData) => axios.post('/api/tasks/bulk/upload-file', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const importBulk = (tasks) => axios.post('/api/tasks/bulk/import', { tasks });
