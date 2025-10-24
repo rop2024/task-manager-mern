@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import GroupForm from '../group/GroupForm';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../../context/ThemeContext';
 import axios from 'axios';
 
-const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSelect, onGroupDeleted, isMobileOpen, onMobileClose }) => {
-  const [showGroupForm, setShowGroupForm] = useState(false);
+const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSelect, onGroupDeleted, isMobileOpen, onMobileClose, onCreateGroupClick }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
@@ -17,7 +15,6 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
 
   const handleGroupCreate = async (groupData) => {
     await onGroupCreate(groupData);
-    setShowGroupForm(false);
   };
   
   const handleDeleteClick = (group, e) => {
@@ -159,7 +156,7 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
               Groups
             </h2>
             <button
-              onClick={() => setShowGroupForm(true)}
+              onClick={onCreateGroupClick}
               className={`p-1 rounded ${isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
               title="Create New Group"
             >
@@ -227,26 +224,6 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
           </div>
         </div>
       </div>
-
-      {/* Group Form Modal */}
-      {showGroupForm && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] overflow-y-auto"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowGroupForm(false);
-            }
-          }}
-        >
-          <div className="w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-            <GroupForm
-              onSubmit={handleGroupCreate}
-              onCancel={() => setShowGroupForm(false)}
-              loading={false}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && groupToDelete && (
