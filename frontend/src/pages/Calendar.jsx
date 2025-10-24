@@ -5,6 +5,7 @@ import CalendarView from '../components/calendar/CalendarView';
 import RemindersList from '../components/calendar/RemindersList';
 import CalendarTaskForm from '../components/calendar/CalendarTaskForm';
 import usePageTitle from '../hooks/usePageTitle';
+import FloatingAddButton from '../components/ui/FloatingAddButton';
 
 const Calendar = () => {
   usePageTitle('Calendar');
@@ -244,6 +245,9 @@ const Calendar = () => {
           />
         </div>
       )}
+
+      {/* Floating Add Button */}
+      <FloatingAddButton />
     </div>
   );
 };

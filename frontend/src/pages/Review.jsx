@@ -5,6 +5,7 @@ import WeeklyStats from '../components/review/WeeklyStats';
 import CompletedTasksReview from '../components/review/CompletedTasksReview';
 import axios from 'axios';
 import usePageTitle from '../hooks/usePageTitle';
+import FloatingAddButton from '../components/ui/FloatingAddButton';
 
 const Review = () => {
   usePageTitle('Review');
@@ -461,6 +462,9 @@ const Review = () => {
           </div>
         )}
       </div>
+
+      {/* Floating Add Button */}
+      <FloatingAddButton />
     </div>
   );
 };

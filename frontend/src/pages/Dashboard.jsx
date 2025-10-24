@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import StatsOverview from '../components/scoreboard/StatsOverview';
 import usePageTitle from '../hooks/usePageTitle';
+import FloatingAddButton from '../components/ui/FloatingAddButton';
 
 const Dashboard = () => {
   usePageTitle('Dashboard');
@@ -135,6 +136,9 @@ const Dashboard = () => {
           loading={loading} 
         />
       </div>
+
+      {/* Floating Add Button */}
+      <FloatingAddButton />
     </div>
   );
 };
