@@ -4,9 +4,6 @@ import { useTheme } from '../../context/ThemeContext';
 const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  
-  console.log('GroupForm rendering with props:', { group, loading, theme });
-
   const [formData, setFormData] = useState({
     name: '',
     description: '',

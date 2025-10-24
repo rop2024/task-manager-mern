@@ -159,10 +159,7 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
               Groups
             </h2>
             <button
-              onClick={() => {
-                console.log('Create group button clicked');
-                setShowGroupForm(true);
-              }}
+              onClick={() => setShowGroupForm(true)}
               className={`p-1 rounded ${isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
               title="Create New Group"
             >
@@ -237,19 +234,14 @@ const Sidebar = ({ groups, onGroupCreate, onGroupEdit, selectedGroup, onGroupSel
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              console.log('Backdrop clicked, closing modal');
               setShowGroupForm(false);
             }
           }}
         >
           <div className="w-full max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-            {console.log('GroupForm modal is rendering')}
             <GroupForm
               onSubmit={handleGroupCreate}
-              onCancel={() => {
-                console.log('GroupForm cancel clicked');
-                setShowGroupForm(false);
-              }}
+              onCancel={() => setShowGroupForm(false)}
               loading={false}
             />
           </div>
