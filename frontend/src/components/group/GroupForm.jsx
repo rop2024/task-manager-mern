@@ -4,6 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  
+  console.log('GroupForm rendering with props:', { group, loading, theme });
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -113,7 +116,7 @@ const GroupForm = ({ group, onSubmit, onCancel, loading }) => {
   };
 
   return (
-    <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'} p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto`}>
+    <div className="p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
       <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'} mb-6`}>
         {group ? 'Edit Group' : 'Create New Group'}
       </h2>
