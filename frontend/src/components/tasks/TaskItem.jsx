@@ -21,6 +21,43 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
     }
   };
 
+  const getCardBackgroundColor = (status, isOverdue, daysUntilDue) => {
+    // Completed tasks: green background
+    if (status === 'completed') {
+      return 'bg-green-50 border-green-200';
+    }
+    // In-progress tasks: blue background
+    if (status === 'in-progress') {
+      return 'bg-blue-50 border-blue-200';
+    }
+    // Overdue or urgent (0-2 days): red background
+    if (isOverdue || (daysUntilDue !== null && daysUntilDue <= 2)) {
+      return 'bg-red-50 border-red-200';
+    }
+    // Default: gray/white background
+    return 'bg-white border-gray-200';
+  };
+
+  const calculateDaysUntilDue = (dueDate) => {
+    if (!dueDate) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diffTime = due - now;
+    const daysUntilDue = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return daysUntilDue;
+  };
+
+  const getDaysUntilDueColor = (daysUntilDue) => {
+    if (daysUntilDue === null) return '';
+    if (daysUntilDue < 0) return 'bg-red-500 text-white'; // Overdue
+    if (daysUntilDue === 0) return 'bg-red-500 text-white'; // Due today
+    if (daysUntilDue <= 2) return 'bg-orange-500 text-white'; // Urgent (1-2 days)
+    if (daysUntilDue <= 7) return 'bg-yellow-500 text-white'; // Soon (3-7 days)
+    return 'bg-green-500 text-white'; // Plenty of time (7+ days)
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'No due date';
     return new Date(dateString).toLocaleDateString();
@@ -30,6 +67,15 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
     if (!dueDate || task.status === 'completed') return false;
     return new Date(dueDate) < new Date() && new Date(dueDate).toDateString() !== new Date().toDateString();
   };
+
+  const daysUntilDue = calculateDaysUntilDue(task.dueAt || task.dueDate);
+  const daysUntilDueLabel = daysUntilDue !== null ? (
+    daysUntilDue < 0 
+      ? `${Math.abs(daysUntilDue)} days overdue`
+      : daysUntilDue === 0
+        ? 'Due today'
+        : `${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''} left`
+  ) : null;
 
   const handleStatusChange = async (newStatus) => {
     if (isUpdating) return;
@@ -92,14 +138,14 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
   const isCompleted = task.status === 'completed';
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-3 sm:p-4 border-l-4 ${
+    <div className={`rounded-lg border border-l-4 p-3 sm:p-4 ${
       task.isImportant ? 'border-l-red-500' : 
-      isDraft ? 'border-l-yellow-500' : 
+      task.status === 'draft' ? 'border-l-yellow-500' : 
       task.status === 'completed' ? 'border-l-green-500' :
       task.status === 'in-progress' ? 'border-l-blue-500' : 'border-l-gray-400'
-    } hover:shadow-sm transition-all duration-200 ${isCompleted ? 'opacity-70' : ''} ${
+    } ${getCardBackgroundColor(task.status, isOverdue(task.dueAt || task.dueDate), daysUntilDue)} hover:shadow-sm transition-all duration-200 ${isCompleted ? 'opacity-70' : ''} ${
       isUpdating ? 'opacity-50 pointer-events-none' : ''
-    } ${isDraft ? 'bg-yellow-50' : ''}`}>
+    }`}>
       
       {/* Main content row */}
       <div className="flex items-center justify-between">
@@ -161,8 +207,15 @@ const TaskItem = ({ task, onEdit, onUpdate }) => {
           </div>
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Days remaining + Actions */}
         <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+          {/* Days remaining badge */}
+          {daysUntilDueLabel && task.status !== 'draft' && (
+            <div className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getDaysUntilDueColor(daysUntilDue)}`}>
+              {daysUntilDueLabel}
+            </div>
+          )}
+
           {/* Quick status toggle for non-completed tasks */}
           {!isDraft && task.status !== 'completed' && (
             <button
