@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 
-const CompletedTasksReview = ({ tasks, weekRange, isDark }) => {
+const CompletedTasksReview = ({ tasks = [], weekRange, isDark }) => {
   const [groupBy, setGroupBy] = useState('day'); // 'day', 'priority', 'group'
   const [sortBy, setSortBy] = useState('completed'); // 'completed', 'priority', 'title'
   const [filterPriority, setFilterPriority] = useState('all'); // 'all', 'high', 'medium', 'low'
 
+  // Ensure tasks is always an array
+  const taskList = Array.isArray(tasks) ? tasks : [];
+
   // Filter tasks by priority
   const filteredTasks = filterPriority === 'all' 
-    ? tasks 
-    : tasks.filter(task => task.priority === filterPriority);
+    ? taskList 
+    : taskList.filter(task => task.priority === filterPriority);
 
   // Group tasks based on groupBy setting
   const groupedTasks = () => {

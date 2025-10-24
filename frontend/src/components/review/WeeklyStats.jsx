@@ -2,17 +2,27 @@ import React from 'react';
 
 const WeeklyStats = ({ stats, completedTasks, weekRange, isDark }) => {
   // Calculate completion metrics - use stats if available, fallback to calculating from tasks
-  const totalCompleted = stats?.totalCompleted || completedTasks.length;
-  const completionsByPriority = stats?.priorityBreakdown || completedTasks.reduce((acc, task) => {
-    acc[task.priority || 'medium'] = (acc[task.priority || 'medium'] || 0) + 1;
-    return acc;
-  }, {});
+  const totalCompleted = stats?.totalCompleted || (completedTasks && completedTasks.length) || 0;
   
-  const completionsByGroup = stats?.groupBreakdown || completedTasks.reduce((acc, task) => {
+  // Build priority breakdown from stats or fallback to tasks
+  const completionsByPriority = stats?.priorityBreakdown || (completedTasks && completedTasks.reduce((acc, task) => {
+    const priority = task.priority || 'medium';
+    acc[priority] = (acc[priority] || 0) + 1;
+    return acc;
+  }, {})) || { high: 0, medium: 0, low: 0 };
+  
+  // Ensure all priority keys exist
+  const normalizedPriority = {
+    high: completionsByPriority.high || 0,
+    medium: completionsByPriority.medium || 0,
+    low: completionsByPriority.low || 0
+  };
+  
+  const completionsByGroup = stats?.groupBreakdown || (completedTasks && completedTasks.reduce((acc, task) => {
     const groupName = task.group?.name || 'No Group';
     acc[groupName] = (acc[groupName] || 0) + 1;
     return acc;
-  }, {});
+  }, {})) || {};
 
   // Calculate daily completions for the week - use backend data if available
   const dailyCompletions = stats?.dailyPattern || Array.from({ length: 7 }, (_, i) => {
@@ -76,7 +86,7 @@ const WeeklyStats = ({ stats, completedTasks, weekRange, isDark }) => {
                 High Priority
               </p>
               <p className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {completionsByPriority.high || 0}
+                {normalizedPriority.high}
               </p>
             </div>
           </div>
@@ -157,7 +167,7 @@ const WeeklyStats = ({ stats, completedTasks, weekRange, isDark }) => {
               By Priority
             </h3>
             <div className="space-y-3">
-              {Object.entries(completionsByPriority).map(([priority, count]) => {
+              {Object.entries(normalizedPriority).map(([priority, count]) => {
                 const percentage = (count / totalCompleted) * 100;
                 const priorityColors = {
                   high: 'bg-red-500',

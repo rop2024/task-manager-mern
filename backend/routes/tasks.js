@@ -337,6 +337,14 @@ router.put(
         }
       }
 
+      // Manually set completedAt if status is being changed to completed
+      if (updates.status === 'completed' && !updates.completedAt) {
+        updates.completedAt = new Date();
+      } else if (updates.status && updates.status !== 'completed' && task.status === 'completed') {
+        // If status is being changed away from completed, clear completedAt
+        updates.completedAt = undefined;
+      }
+
       const updatedTask = await Task.findOneAndUpdate(
         { _id: req.params.id, user: req.user.id },
         updates,
