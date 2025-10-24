@@ -73,6 +73,40 @@ const TaskList = ({
     return new Date(dueDate) < new Date();
   };
 
+  // Group tasks by date categories
+  const groupTasksByDate = (tasks) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const groups = {
+      today: [],
+      thisWeek: [],
+      thisMonth: [],
+      other: []
+    };
+
+    tasks.forEach(task => {
+      // Use dueAt if available, otherwise createdAt
+      const taskDate = task.dueAt ? new Date(task.dueAt) : new Date(task.createdAt);
+      const taskDateOnly = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
+
+      if (taskDateOnly.getTime() === today.getTime()) {
+        groups.today.push(task);
+      } else if (taskDateOnly >= startOfWeek && taskDateOnly < today) {
+        groups.thisWeek.push(task);
+      } else if (taskDateOnly >= startOfMonth && taskDateOnly < startOfWeek) {
+        groups.thisMonth.push(task);
+      } else {
+        groups.other.push(task);
+      }
+    });
+
+    return groups;
+  };
+
   const loadTasks = async () => {
     if (isUsingPropTasks) return; // Don't load if using prop tasks
     
@@ -111,6 +145,9 @@ const TaskList = ({
     task.status === 'pending' || task.status === 'in-progress'
   );
   const completedTasks = tasks.filter(task => task.status === 'completed');
+
+  // Group active tasks by date
+  const groupedActiveTasks = groupTasksByDate(activeTasks);
 
   const handleTaskCreated = (newTask) => {
     if (isUsingPropTasks && onTasksChange) {
@@ -310,15 +347,104 @@ const TaskList = ({
               )}
             </div>
 
-            {/* Task Items */}
-            {filteredTasks.map(task => (
-              <TaskItem
-                key={task._id}
-                task={task}
-                onEdit={onTaskEdit}
-                onUpdate={handleTaskUpdate}
-              />
-            ))}
+            {/* Render grouped tasks for active tab */}
+            {isUsingPropTasks && !showCompleted && (
+              <div className="space-y-6">
+                {/* Today */}
+                {groupedActiveTasks.today.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      Today ({groupedActiveTasks.today.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedActiveTasks.today.map(task => (
+                        <TaskItem
+                          key={task._id}
+                          task={task}
+                          onEdit={onTaskEdit}
+                          onUpdate={handleTaskUpdate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* This Week */}
+                {groupedActiveTasks.thisWeek.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      This Week ({groupedActiveTasks.thisWeek.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedActiveTasks.thisWeek.map(task => (
+                        <TaskItem
+                          key={task._id}
+                          task={task}
+                          onEdit={onTaskEdit}
+                          onUpdate={handleTaskUpdate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* This Month */}
+                {groupedActiveTasks.thisMonth.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                      This Month ({groupedActiveTasks.thisMonth.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedActiveTasks.thisMonth.map(task => (
+                        <TaskItem
+                          key={task._id}
+                          task={task}
+                          onEdit={onTaskEdit}
+                          onUpdate={handleTaskUpdate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Other */}
+                {groupedActiveTasks.other.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                      Other ({groupedActiveTasks.other.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedActiveTasks.other.map(task => (
+                        <TaskItem
+                          key={task._id}
+                          task={task}
+                          onEdit={onTaskEdit}
+                          onUpdate={handleTaskUpdate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Render regular list for completed tasks or when not using prop tasks */}
+            {(!isUsingPropTasks || showCompleted) && (
+              <div className="space-y-3">
+                {filteredTasks.map(task => (
+                  <TaskItem
+                    key={task._id}
+                    task={task}
+                    onEdit={onTaskEdit}
+                    onUpdate={handleTaskUpdate}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
